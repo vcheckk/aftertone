@@ -4,8 +4,11 @@
 # When edits take effect
 # ----------------------
 # • Every agent reply (no daemon restart): enabled, quiet_hours, min_chars, max_chars,
-#   heuristic_*, speed, lang, total_step, mode — speak_summary_prepare.py reads this file
-#   each time and sends speed/lang/totalStep on POST /say.
+#   spoken_summary_max_chars, heuristic_max_chars, plain_excerpt_max_chars, heuristic_*,
+#   only_speak_spoken_summary, speed, lang, total_step, mode —
+#   speak_summary_prepare.py reads this file each time and sends speed/lang/totalStep on POST /say.
+#   After changing `lang`, from repo root run: uv run --directory py python sync_spoken_rule_lang.py
+#   (updates the auto-generated blurb in .cursor/rules/spoken-summary.mdc).
 # • Only after daemon restart: port, onnx_dir, voice_style / voice_type, use_gpu — the
 #   long‑running tts_daemon loads models and voice JSON once at start (tts_daemon_ctl.py).
 # • Port file: while the daemon is running, the hook posts to the port in
@@ -25,7 +28,10 @@ mode = "queue"
 voice_type = "M1"
 # Path to the voice style JSON (relative to py/ or absolute). Set to "" to derive from voice_type only.
 voice_style = ""
-# Language tag passed into synthesis (see helper.AVAILABLE_LANGS), e.g. en, ko, ja.
+# Language of the spoken *words* and of the ONNX text processor (<lang>…</lang>);
+# must be one of helper.AVAILABLE_LANGS (e.g. en, fr, ja). The hook does not translate:
+# write <spoken_summary> in this language, or rely on heuristics only when the
+# assistant reply is already in the same language. See only_speak_spoken_summary.
 lang = "en"
 # Playback speed: 1.0 is baseline; higher speaks faster (same meaning as CLI examples).
 speed = 1.05
@@ -35,9 +41,16 @@ total_step = 4
 # Empty = always speak. Set e.g. "22:00-08:00" for overnight quiet (local clock).
 quiet_hours = ""
 min_chars = 5
-# Max characters sent to TTS (after choosing spoken_summary or fallback text).
-# Use 0 for no limit (entire chosen text is spoken; very long replies = long audio).
+# Max characters sent to TTS for heuristic / plain-excerpt paths (and upper bound when
+# spoken_summary_max_chars is 0). Use 0 for no limit on those paths (not recommended).
 max_chars = 2000
+# Hard cap for <spoken_summary>…</spoken_summary> body only (default 360). Stops TTS from
+# reading an essay if the tag wraps most of the reply. Set to 0 to use max_chars for the tag.
+spoken_summary_max_chars = 360
+# Max characters for sentence heuristics when there is no tag (default 480).
+heuristic_max_chars = 480
+# Last-resort plain excerpt cap (default 420).
+plain_excerpt_max_chars = 420
 # Fallback when there is no <spoken_summary>: how many sentences to join after
 # skipping soft openers (1 = brief, 2 = what + often why).
 heuristic_max_sentences = 2
@@ -45,3 +58,8 @@ heuristic_max_sentences = 2
 # and cap fallback sentences (listeners skim code on screen; keep TTS short).
 heuristic_code_fence_fraction = 0.35
 heuristic_max_sentences_code_heavy = 1
+
+# If true, never use sentence / excerpt fallbacks: only <spoken_summary>…</spoken_summary>
+# is spoken. Use with non-English lang so TTS never reads English (or other mismatch)
+# from heuristics. Default false keeps backward-compatible behavior.
+only_speak_spoken_summary = false

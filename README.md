@@ -53,9 +53,10 @@ Bring `.cursor/` + `py/` (or symlink). Keep `speak_summary.toml` paths consisten
 
 | Doc / file | Role |
 |------------|------|
-| **[`.cursor/hooks/README.md`](.cursor/hooks/README.md)** | **Full reference:** every `speak_summary.toml` key, `lang` list, heuristics, `quiet_hours`, daemon **start/stop/status/restart**, logs. |
-| [`.cursor/hooks/speak_summary.toml`](.cursor/hooks/speak_summary.toml) | Port, voice, `lang`, speed, GPU, quiet hours, limits, heuristics. |
-| [`.cursor/rules/spoken-summary.mdc`](.cursor/rules/spoken-summary.mdc) | When/how to emit `<spoken_summary>`; **match TOML `lang`** inside the tag; write for speech. |
+| **[`.cursor/hooks/README.md`](.cursor/hooks/README.md)** | **Full reference:** every `speak_summary.toml` key (including **`spoken_summary_max_chars`**, **`heuristic_max_chars`**, **`plain_excerpt_max_chars`**, **`only_speak_spoken_summary`**), valid `lang` codes, heuristics, `quiet_hours`, daemon **start / stop / status / restart**, logs, smoke test, when TOML changes need a restart, and **`sync_spoken_rule_lang.py`** after changing `lang`. |
+| [`.cursor/hooks/speak_summary.toml`](.cursor/hooks/speak_summary.toml) | Port, voice, `lang`, speed, GPU, quiet hours, limits, heuristics, tag-only mode. |
+| [`.cursor/rules/spoken-summary.mdc`](.cursor/rules/spoken-summary.mdc) | When/how to emit `<spoken_summary>`; **match TOML `lang`** (synced blurb — run `uv run --directory py python sync_spoken_rule_lang.py` from repo root after edits). |
+| **[`AGENTS.md`](AGENTS.md)** | Cursor TTS digest (flow, verify hooks, caps, “nothing speaks”). |
 
 Disable speech: `enabled = false` in `speak_summary.toml`.
 

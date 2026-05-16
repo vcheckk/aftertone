@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
 """
-Build JSON payload for POST /say from agent / IDE hook stdin (Aftertone).
+Build JSON payload for POST /say from Cursor hook stdin.
 
 Handles:
-- afterAgentResponse (Cursor and compatible hooks): uses inline `text` when
-  hook_event_name is afterAgentResponse (avoids transcript_path, which stop often lacks).
+- afterAgentResponse: uses inline `text` when hook_event_name is afterAgentResponse
+  (avoids transcript_path, which stop often lacks).
 - Other events: reads transcript jsonl from transcript_path when present.
 
 Prefers `<spoken_summary>...</spoken_summary>` in the assistant reply; otherwise
 picks up to N substantive sentences (skips common reassurance openers); N is
 lower for code-heavy replies when configured in speak_summary.toml.
+
+`lang` in speak_summary.toml is the language of the **words** sent to TTS (same
+code the ONNX stack uses). The hook does **not** translate: heuristic fallback
+reuses assistant wording as-is. Set `only_speak_spoken_summary = true` to skip
+fallbacks and only speak explicit tag text (write that text in `lang`).
 
 Emits one line JSON for /say or {} if nothing to speak.
 """
@@ -225,6 +230,75 @@ def _plain_excerpt(raw: str, max_chars: int) -> str:
     return _clamp(s, max_chars) if s else ""
 
 
+def _spoken_tag_to_speakable(raw_inner: str, cap: int) -> str:
+    """
+    Normalize `<spoken_summary>` body for TTS: strip markdown, then take leading
+    sentences that fit under `cap` so a mistaken wall of text does not get read aloud.
+    """
+    s = _strip_markdownish(raw_inner.replace("\n", " "))
+    if not s:
+        return ""
+    if cap <= 0:
+        return s.strip()
+    parts = _split_sentences(s)
+    if not parts:
+        return _clamp(s, cap)
+    out: list[str] = []
+    for p in parts:
+        trial = " ".join(out + [p]).strip() if out else p.strip()
+        if len(trial) <= cap:
+            out.append(p)
+        else:
+            break
+    if not out:
+        return _clamp(parts[0], cap)
+    joined = " ".join(out).strip()
+    return _clamp(joined, cap) if len(joined) > cap else joined
+
+
+def _effective_tag_cap(cfg: dict, max_chars: int) -> int:
+    """
+    Max length for `<spoken_summary>` body only. Default 360 chars — separate from
+    `max_chars` so a high heuristic cap does not allow essay-length TTS from the tag.
+    Set `spoken_summary_max_chars = 0` in TOML to use `max_chars` for the tag too.
+    """
+    try:
+        sc = int(cfg.get("spoken_summary_max_chars", 360))
+    except (TypeError, ValueError):
+        sc = 360
+    if sc <= 0:
+        return max_chars if max_chars > 0 else 10**9
+    if max_chars <= 0:
+        return sc
+    return min(max_chars, sc)
+
+
+def _effective_plain_cap(cfg: dict, max_chars: int) -> int:
+    """Cap for `_plain_excerpt` last-resort path (default 420). `0` means use `max_chars`."""
+    try:
+        pe = int(cfg.get("plain_excerpt_max_chars", 420))
+    except (TypeError, ValueError):
+        pe = 420
+    if pe <= 0:
+        return max_chars if max_chars > 0 else 10**9
+    if max_chars <= 0:
+        return pe
+    return min(max_chars, pe)
+
+
+def _effective_heuristic_cap(cfg: dict, max_chars: int) -> int:
+    """Cap for sentence heuristics (default 480). Stops one huge pseudo-sentence under high max_chars."""
+    try:
+        h = int(cfg.get("heuristic_max_chars", 480))
+    except (TypeError, ValueError):
+        h = 480
+    if h <= 0:
+        return max_chars if max_chars > 0 else 10**9
+    if max_chars <= 0:
+        return h
+    return min(max_chars, h)
+
+
 def _clamp(s: str, max_chars: int) -> str:
     """Trim speakable text. max_chars <= 0 means no limit (full string)."""
     s = s.strip()
@@ -237,6 +311,19 @@ def _cfg_enabled(cfg: dict) -> bool:
     v = cfg.get("enabled", True)
     if isinstance(v, str):
         return v.strip().lower() not in ("0", "false", "no", "off")
+    return bool(v)
+
+
+def _cfg_bool(cfg: dict, key: str, default: bool) -> bool:
+    v = cfg.get(key, default)
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, str):
+        s = v.strip().lower()
+        if s in ("0", "false", "no", "off"):
+            return False
+        if s in ("1", "true", "yes", "on"):
+            return True
     return bool(v)
 
 
@@ -318,18 +405,23 @@ def main() -> None:
             return
 
     spoken = _extract_spoken_summary(raw_text)
+    if _cfg_bool(cfg, "only_speak_spoken_summary", False) and not spoken:
+        print("{}")
+        return
+
     base = _without_spoken_block(raw_text)
     code_heavy = _code_fence_fraction(raw_text) >= fence_thr
     eff_sentences = h_code_max if code_heavy else h_max
+    hcap = _effective_heuristic_cap(cfg, max_chars)
 
     if spoken:
-        text = _clamp(spoken, max_chars)
+        text = _spoken_tag_to_speakable(spoken, _effective_tag_cap(cfg, max_chars))
     else:
-        text = _heuristic_spoken(base, max_chars, eff_sentences)
+        text = _heuristic_spoken(base, hcap, eff_sentences)
         if len(text) < min_chars:
-            text = _heuristic_spoken(_demote_code_fences(base), max_chars, eff_sentences)
+            text = _heuristic_spoken(_demote_code_fences(base), hcap, eff_sentences)
         if len(text) < min_chars:
-            text = _plain_excerpt(raw_text, max_chars)
+            text = _plain_excerpt(raw_text, _effective_plain_cap(cfg, max_chars))
 
     if not text.strip():
         print("{}")

@@ -26,7 +26,7 @@ uv run python tts_daemon_ctl.py restart --repo-root ..
 
 **Optional:** `uv run python tts_daemon_ctl.py start --repo-root .. --port 9999` overrides the TOML `port` for that start only.
 
-**Environment:** **`AFTERTONE_REPO`** — absolute path to the repo root; set automatically by `speak_summary.sh` when the hook runs. **`SUPERTONIC_REPO`** is set to the same path as a legacy alias for older scripts or forks.
+**Environment:** `SUPERTONIC_REPO` — absolute path to the repo root; set automatically by `speak_summary.sh` when the hook runs.
 
 ---
 
@@ -34,7 +34,7 @@ uv run python tts_daemon_ctl.py restart --repo-root ..
 
 | Keys | When they apply | Need `restart`? |
 |------|------------------|-----------------|
-| **`enabled`**, **`quiet_hours`**, **`min_chars`**, **`max_chars`**, **`heuristic_max_sentences`**, **`heuristic_code_fence_fraction`**, **`heuristic_max_sentences_code_heavy`** | Read **every** hook run by `speak_summary_prepare.py` — they control **whether** to speak and **which text** is chosen (not sent as separate fields on `/say`). | **No** |
+| **`enabled`**, **`quiet_hours`**, **`min_chars`**, **`max_chars`**, **`spoken_summary_max_chars`**, **`heuristic_max_chars`**, **`plain_excerpt_max_chars`**, **`heuristic_max_sentences`**, **`heuristic_code_fence_fraction`**, **`heuristic_max_sentences_code_heavy`**, **`only_speak_spoken_summary`** | Read **every** hook run by `speak_summary_prepare.py` — they control **whether** to speak and **which text** is chosen (not sent as separate fields on `/say`). | **No** |
 | **`speed`**, **`lang`**, **`total_step`**, **`mode`** | Read every hook run; included in the **`POST /say`** JSON body. | **No** |
 | **`port`**, **`onnx_dir`**, **`voice_style`**, **`voice_type`**, **`use_gpu`** | Read only when **`tts_daemon`** **starts** (`tts_daemon_ctl.py start`). Models and voice JSON load once. | **Yes** — `restart` (or `stop` then `start`). |
 
@@ -96,10 +96,12 @@ Paths like `../assets/...` are **relative to `py/`** (because the daemon is star
 
 ### `lang`
 
-- **Meaning:** Language code wrapped around text for the ONNX text processor (`<lang>…</lang>`). Sent on every **`POST /say`**.
+- **Meaning:** The **natural language of the words** you want TTS to speak **and** the ONNX text-processor code (the model wraps your string as `<lang>…</lang>`). Sent on every **`POST /say`**.
 - **Type:** String; must be one of the codes below or synthesis raises **`Invalid language`**.
 - **Restart?** No.
-- **Spoken wording:** The text chosen for TTS (prefer `<spoken_summary>…</spoken_summary>` in the agent reply, else the heuristic snippet) should be written in the **same natural language** as this `lang`. Mismatch (e.g. English sentences with `lang = "fr"`) usually sounds bad because the model and voice are tuned per code. Agents are guided in [`.cursor/rules/spoken-summary.mdc`](../rules/spoken-summary.mdc) to read this TOML and match the tag language to `lang`.
+- **No auto-translation:** `speak_summary_prepare.py` does **not** translate the assistant reply. Whatever string is chosen (tag or heuristic) is sent as-is. If the reply is English but `lang` is `fr`, you should put French inside `<spoken_summary>…</spoken_summary>`, or set **`only_speak_spoken_summary = true`** so heuristics never pull English. Agents: see [`.cursor/rules/spoken-summary.mdc`](../rules/spoken-summary.mdc).
+- **Heuristic fallback:** When there is **no** tag, the hook reuses **snippets of the assistant message** (often English). That only matches `lang` if the message is already in that language — otherwise use the tag or enable **`only_speak_spoken_summary`**.
+- **Rule file stays in sync:** [`.cursor/rules/spoken-summary.mdc`](../rules/spoken-summary.mdc) contains an **auto-generated** line with the current TOML `lang`. After you change `lang`, run from **repo root**: `uv run --directory py python sync_spoken_rule_lang.py` (optional `--check` for CI). See [`py/sync_spoken_rule_lang.py`](../../py/sync_spoken_rule_lang.py).
 
 **Allowed `lang` values** (from `py/helper.py` `AVAILABLE_LANGS`, 31 codes):
 
@@ -137,8 +139,26 @@ Paths like `../assets/...` are **relative to `py/`** (because the daemon is star
 
 ### `max_chars`
 
-- **Meaning:** Maximum characters sent to TTS for the chosen line (tag or heuristic); longer strings are trimmed at a word boundary with `...`.
-- **Type:** Integer. **`0` or negative** means **no limit** (very long replies → very long audio).
+- **Meaning:** Upper bound for **heuristic** and **plain-excerpt** paths, and for `<spoken_summary>` **only when** `spoken_summary_max_chars` is **`0`** (see below).
+- **Type:** Integer. **`0` or negative** means **no limit** on those paths (very long replies → very long audio).
+- **Restart?** No.
+
+### `spoken_summary_max_chars`
+
+- **Meaning:** Maximum characters taken from **inside** `<spoken_summary>…</spoken_summary>` after markdown stripping and **leading-sentence** assembly (the hook does not read the whole tag if it is a wall of text). Prevents the annoyance where TTS reads an entire assistant essay because it was wrapped in the tag or the tag was huge.
+- **Type:** Integer. Default **`360`** in code if the key is omitted. **`0`** means “use **`max_chars`** for the tag too” (legacy behavior).
+- **Restart?** No.
+
+### `heuristic_max_chars`
+
+- **Meaning:** Hard cap for the **no-tag** sentence heuristic (default **`480`**). Independent of `max_chars` so raising `max_chars` for other reasons does not let one giant “sentence” (few `.!?` breaks) run for minutes.
+- **Type:** Integer. **`0`** = use **`max_chars`** only.
+- **Restart?** No.
+
+### `plain_excerpt_max_chars`
+
+- **Meaning:** Cap for the last-resort **plain excerpt** path when heuristics are still too short (default **`420`**).
+- **Type:** Integer. **`0`** = use **`max_chars`** only.
 - **Restart?** No.
 
 ### `heuristic_max_sentences`
@@ -159,6 +179,12 @@ Paths like `../assets/...` are **relative to `py/`** (because the daemon is star
 
 - **Meaning:** Max fallback sentences when **code-heavy** (see above).
 - **Type:** Integer, **clamped `1`–`3`**. Default **`1`**.
+- **Restart?** No.
+
+### `only_speak_spoken_summary`
+
+- **Meaning:** If **`true`**, the prepare script outputs **`{}`** whenever the assistant message has **no** `<spoken_summary>…</spoken_summary>` block — no sentence heuristics and no plain excerpt. Guarantees TTS never reads a language mismatch from fallbacks; you must write the tag in the same language as **`lang`**.
+- **Type:** Boolean. Default **`false`** (backward compatible: heuristics still run without a tag).
 - **Restart?** No.
 
 ---
