@@ -136,8 +136,9 @@ def _demote_code_fences(raw: str) -> str:
 def _strip_markdownish(s: str) -> str:
     s = re.sub(r"```[\s\S]*?```", " ", s)
     s = re.sub(r"`[^`]+`", " ", s)
-    s = re.sub(r"https?://\S+", " ", s)
+    # Markdown links before bare URLs so `http://...)` is not stripped from `[t](url)`.
     s = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", s)
+    s = re.sub(r"https?://\S+", " ", s)
     s = re.sub(r"[#*_~>`]+", " ", s)
     s = re.sub(r"\s+", " ", s).strip()
     return s
