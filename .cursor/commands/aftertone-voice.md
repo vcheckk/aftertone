@@ -28,14 +28,15 @@ One question, `allow_multiple: false`. Use these options (`id` = TOML preset, `l
 
 Prompt example: `Choose a voice (daemon restarts after apply).`
 
-(Optional check: `uv run --directory py python speak_summary_config.py voice-picker` prints the same `id|label` lines.)
+(Optional check: run `voice-picker` under the global install — see `aftertone-status`.)
 
 ## Apply (only after the user picks)
 
-From **repository root** (`PRESET` = chosen **id**, e.g. `F4`, not the display name):
+`PRESET` = chosen **id** (e.g. `F4`), not the display name:
 
 ```bash
-uv run --directory py python speak_summary_config.py set voice PRESET --restart --ensure
+AFTERTONE_ROOT="$(bash "${HOME}/.cursor/hooks/aftertone-root.sh")"
+uv run --directory "${AFTERTONE_ROOT}/py" python speak_summary_config.py set voice PRESET --restart --ensure
 ```
 
 You may also pass a first name (e.g. `Sara`) — the script resolves it to the preset id.

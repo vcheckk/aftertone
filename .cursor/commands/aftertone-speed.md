@@ -21,7 +21,8 @@ Your **first** tool call must be **AskQuestion** with:
 ## Apply
 
 ```bash
-uv run --directory py python speak_summary_config.py set speed VALUE
+AFTERTONE_ROOT="$(bash "${HOME}/.cursor/hooks/aftertone-root.sh")"
+uv run --directory "${AFTERTONE_ROOT}/py" python speak_summary_config.py set speed VALUE
 ```
 
 Allowed range **0.5–2.0** (recommended **0.9–1.5**). No daemon restart. Report stdout only.

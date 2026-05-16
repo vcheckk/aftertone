@@ -6,14 +6,10 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="${SCRIPT_DIR}"
-while [[ "${REPO}" != "/" ]]; do
-  if [[ -f "${REPO}/py/speak_summary_prepare.py" ]]; then
-    break
-  fi
-  REPO="$(dirname "${REPO}")"
-done
-[[ -f "${REPO}/py/speak_summary_prepare.py" ]] || exit 0
+# shellcheck source=resolve_aftertone_repo.sh
+source "${SCRIPT_DIR}/resolve_aftertone_repo.sh"
+REPO=""
+resolve_aftertone_repo "${SCRIPT_DIR}" || exit 0
 
 PY="${REPO}/py"
 STATE_DIR="${REPO}/.cursor/hooks/state"

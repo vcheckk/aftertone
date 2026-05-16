@@ -21,13 +21,9 @@ _ENABLED_LINE = re.compile(
 
 
 def _repo_root() -> Path:
-    env = (
-        os.environ.get("AFTERTONE_REPO", "").strip()
-        or os.environ.get("SUPERTONIC_REPO", "").strip()
-    )
-    if env:
-        return Path(env).resolve()
-    return Path(__file__).resolve().parent.parent
+    from aftertone_paths import resolve_repo_root
+
+    return resolve_repo_root()
 
 
 def _toml_path(repo: Path) -> Path:

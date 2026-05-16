@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+"""Register Aftertone user-level Cursor hooks (~/.cursor/hooks.json)."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import shutil
+import stat
+from pathlib import Path
+
+_AFTER_AGENT = "afterAgentResponse"
+_CMD = "bash ./hooks/aftertone-speak_summary.sh"
+
+
+def _merge_hooks(existing: dict, fragment: dict) -> dict:
+    out = dict(existing)
+    out["version"] = max(int(out.get("version", 1)), int(fragment.get("version", 1)))
+    hooks = dict(out.get("hooks") or {})
+    frag_hooks = fragment.get("hooks") or {}
+    for event, entries in frag_hooks.items():
+        cur = list(hooks.get(event) or [])
+        seen = {e.get("command") for e in cur if isinstance(e, dict)}
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            if entry.get("command") in seen:
+                continue
+            cur.append(entry)
+            seen.add(entry.get("command"))
+        hooks[event] = cur
+    out["hooks"] = hooks
+    return out
+
+
+def install_global(*, install_dir: Path, dry_run: bool = False) -> None:
+    install_dir = install_dir.expanduser().resolve()
+    marker = install_dir / "py" / "speak_summary_prepare.py"
+    if not marker.is_file():
+        raise SystemExit(f"not an Aftertone install: {install_dir}")
+
+    user_cursor = Path.home() / ".cursor"
+    user_hooks = user_cursor / "hooks"
+    user_hooks_json = user_cursor / "hooks.json"
+    template_dir = install_dir / "scripts" / "cursor-global"
+    wrapper_src = template_dir / "aftertone-speak_summary.sh"
+    fragment_src = template_dir / "hooks.json"
+    root_sh_src = install_dir / "scripts" / "aftertone-root.sh"
+
+    if not wrapper_src.is_file() or not fragment_src.is_file():
+        raise SystemExit(f"missing templates under {template_dir}")
+
+    if dry_run:
+        print(f"would write {user_hooks / 'aftertone-install-dir'} -> {install_dir}")
+        print(f"would copy {wrapper_src} -> {user_hooks / 'aftertone-speak_summary.sh'}")
+        print(f"would merge {user_hooks_json}")
+        return
+
+    user_hooks.mkdir(parents=True, exist_ok=True)
+    (user_hooks / "aftertone-install-dir").write_text(f"{install_dir}\n", encoding="utf-8")
+
+    dest_wrapper = user_hooks / "aftertone-speak_summary.sh"
+    shutil.copy2(wrapper_src, dest_wrapper)
+    dest_wrapper.chmod(dest_wrapper.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+    if root_sh_src.is_file():
+        dest_root = user_hooks / "aftertone-root.sh"
+        shutil.copy2(root_sh_src, dest_root)
+        dest_root.chmod(dest_root.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+    fragment = json.loads(fragment_src.read_text(encoding="utf-8"))
+    if user_hooks_json.is_file():
+        existing = json.loads(user_hooks_json.read_text(encoding="utf-8"))
+        backup = user_hooks_json.with_suffix(f".json.bak.{int(__import__('time').time())}")
+        shutil.copy2(user_hooks_json, backup)
+        merged = _merge_hooks(existing, fragment)
+    else:
+        merged = fragment
+
+    user_hooks_json.write_text(json.dumps(merged, indent=2) + "\n", encoding="utf-8")
+
+    commands_src = install_dir / ".cursor" / "commands"
+    if commands_src.is_dir():
+        user_commands = user_cursor / "commands"
+        user_commands.mkdir(parents=True, exist_ok=True)
+        for cmd in commands_src.glob("aftertone-*.md"):
+            shutil.copy2(cmd, user_commands / cmd.name)
+
+    rule_src = install_dir / ".cursor" / "rules" / "spoken-summary.mdc"
+    if rule_src.is_file():
+        user_rules = user_cursor / "rules"
+        user_rules.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(rule_src, user_rules / "spoken-summary.mdc")
+
+    has_aftertone = any(
+        isinstance(e, dict) and e.get("command") == _CMD
+        for e in (merged.get("hooks") or {}).get(_AFTER_AGENT, [])
+    )
+    print(f"Global Cursor hooks: {user_hooks_json}")
+    print(f"Install root: {install_dir}")
+    print(f"afterAgentResponse Aftertone hook: {'yes' if has_aftertone else 'no'}")
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(description="Install Aftertone user-level Cursor hooks.")
+    p.add_argument("--install-dir", type=Path, required=True, help="Aftertone clone root")
+    p.add_argument("--dry-run", action="store_true")
+    args = p.parse_args()
+    install_global(install_dir=args.install_dir, dry_run=args.dry_run)
+
+
+if __name__ == "__main__":
+    main()

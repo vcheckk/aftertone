@@ -33,15 +33,9 @@ _DEFAULT_VOICE_PRESETS = frozenset(
 
 
 def _repo_root(explicit: Path | None) -> Path:
-    if explicit is not None:
-        return explicit.expanduser().resolve()
-    env = (
-        os.environ.get("AFTERTONE_REPO", "").strip()
-        or os.environ.get("SUPERTONIC_REPO", "").strip()
-    )
-    if env:
-        return Path(env).resolve()
-    return Path(__file__).resolve().parent.parent
+    from aftertone_paths import resolve_repo_root
+
+    return resolve_repo_root(explicit)
 
 
 def _py_dir() -> Path:

@@ -11,7 +11,7 @@
 
 ## Commands
 
-- One-line install: `curl -fsSL https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.sh | bash` (see `scripts/install.sh`).
+- One-line install: `curl -fsSL .../install.sh | bash -s -- --install-uv --start-daemon` → **`~/aftertone`** + **user hooks** in `~/.cursor/hooks.json` (default `--global`). Legacy per-project: `--no-global --into .`. See `scripts/install.sh`.
 - Bootstrap: `bash scripts/bootstrap.sh` from repo root.
 - Daemon: `cd py && uv run python tts_daemon_ctl.py start --repo-root ..`
 - **User config:** slash `/aftertone-*` only ([`.cursor/commands/`](.cursor/commands/)). When the user wants to change TTS settings, run the matching command’s scripts — do not tell them to edit TOML or use terminal CLIs directly. **lang/speed/mode/voice** without a value: **AskQuestion** first (see each command file); **voice** uses `set voice … --restart --ensure`. Open the **repo root** as the workspace so commands load (opening only `py/` still works for hooks via [py/.cursor/hooks.json](py/.cursor/hooks.json) if present).
@@ -20,13 +20,14 @@
 
 ## Env
 
-- **`AFTERTONE_REPO`** — preferred repo root for hooks/daemon (set by `speak_summary.sh`).
+- **`AFTERTONE_REPO`** / **`AFTERTONE_INSTALL_DIR`** — install root (`~/aftertone` by default; `~/.cursor/hooks/aftertone-install-dir` after global install). Set by hooks or env.
 - **`SUPERTONIC_REPO`** — legacy alias (same path; older forks).
 
 ## Facts
 
 - Assets: Hugging Face `Supertone/supertonic-3` via `fetch_assets.py` → `./assets/`.
-- Cursor hooks are **per workspace** `.cursor/`. User-wide hooks live under `~/.cursor/` (different layout).
+- **Global install (default):** user hooks `~/.cursor/hooks.json` → wrapper → `~/aftertone/.cursor/hooks/speak_summary.sh`. Config TOML + daemon state stay under **`~/aftertone/.cursor/hooks/`**. Slash commands copied to `~/.cursor/commands/`.
+- **Legacy:** project `.cursor/hooks.json` via `install.sh --into` (duplicates `py/` per repo).
 
 ## Cursor spoken summaries (`afterAgentResponse` + `tts_daemon`)
 

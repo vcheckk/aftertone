@@ -1,0 +1,77 @@
+"""Tests for user-level Cursor hook registration."""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from install_global_hooks import _merge_hooks, install_global
+
+
+def test_merge_hooks_appends_without_duplicates() -> None:
+    existing = {
+        "version": 1,
+        "hooks": {
+            "afterAgentResponse": [{"command": "bash ./hooks/other.sh", "timeout": 1}],
+        },
+    }
+    fragment = {
+        "version": 1,
+        "hooks": {
+            "afterAgentResponse": [
+                {"command": "bash ./hooks/aftertone-speak_summary.sh", "timeout": 8},
+            ],
+        },
+    }
+    merged = _merge_hooks(existing, fragment)
+    cmds = [h["command"] for h in merged["hooks"]["afterAgentResponse"]]
+    assert cmds == [
+        "bash ./hooks/other.sh",
+        "bash ./hooks/aftertone-speak_summary.sh",
+    ]
+
+
+def test_install_global_writes_files(tmp_path: Path, monkeypatch) -> None:
+    fake_home = tmp_path / "home"
+    fake_home.mkdir()
+    monkeypatch.setenv("HOME", str(fake_home))
+
+    install = tmp_path / "aftertone"
+    (install / "py").mkdir(parents=True)
+    (install / "py" / "speak_summary_prepare.py").write_text("# stub\n")
+    (install / "scripts" / "cursor-global").mkdir(parents=True)
+    wrapper = install / "scripts/cursor-global/aftertone-speak_summary.sh"
+    wrapper.write_text("#!/bin/bash\nexit 0\n", encoding="utf-8")
+    (install / "scripts/cursor-global/hooks.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "hooks": {
+                    "afterAgentResponse": [
+                        {
+                            "command": "bash ./hooks/aftertone-speak_summary.sh",
+                            "timeout": 8,
+                        }
+                    ],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (install / ".cursor/hooks/speak_summary.sh").parent.mkdir(parents=True)
+    (install / ".cursor/hooks/speak_summary.sh").write_text("# stub\n")
+
+    install_global(install_dir=install)
+
+    assert (fake_home / ".cursor/hooks/aftertone-install-dir").read_text().strip() == str(
+        install.resolve()
+    )
+    assert (fake_home / ".cursor/hooks/aftertone-speak_summary.sh").is_file()
+    hooks = json.loads((fake_home / ".cursor/hooks.json").read_text())
+    assert any(
+        e.get("command") == "bash ./hooks/aftertone-speak_summary.sh"
+        for e in hooks["hooks"]["afterAgentResponse"]
+    )

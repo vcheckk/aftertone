@@ -8,7 +8,9 @@
 | Flag | Meaning |
 |------|---------|
 | `--dir PATH` | Clone location (default `~/aftertone`) |
-| `--into PATH` | Copy `.cursor` hooks/commands/rules + `py/` into another repo; symlink `assets/` |
+| `--global` | Register user hooks in `~/.cursor/` (default) |
+| `--no-global` | Skip `~/.cursor/hooks.json` registration |
+| `--into PATH` | **Legacy:** copy hooks + `py/` into another repo; symlink `assets/` |
 | `--branch NAME` | Git branch (default `main`) |
 | `--skip-assets` | Skip model download |
 | `--start-daemon` | Run `tts_daemon_ctl.py start` after bootstrap |

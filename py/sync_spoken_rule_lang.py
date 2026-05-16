@@ -105,11 +105,9 @@ def main() -> int:
         help="Exit 1 if the rule file does not match TOML (CI / pre-commit).",
     )
     args = p.parse_args()
-    repo = (
-        args.repo_root.expanduser().resolve()
-        if args.repo_root is not None
-        else Path(__file__).resolve().parent.parent
-    )
+    from aftertone_paths import resolve_repo_root
+
+    repo = resolve_repo_root(args.repo_root)
     return sync_rule(repo, check_only=args.check)
 
 

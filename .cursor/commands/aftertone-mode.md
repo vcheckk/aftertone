@@ -17,7 +17,8 @@ Your **first** tool call must be **AskQuestion**:
 ## Apply
 
 ```bash
-uv run --directory py python speak_summary_config.py set mode MODE
+AFTERTONE_ROOT="$(bash "${HOME}/.cursor/hooks/aftertone-root.sh")"
+uv run --directory "${AFTERTONE_ROOT}/py" python speak_summary_config.py set mode MODE
 ```
 
 No daemon restart. Report stdout only.

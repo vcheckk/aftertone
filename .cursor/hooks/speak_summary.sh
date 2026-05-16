@@ -10,18 +10,13 @@
 
 set -uo pipefail
 
-# Resolve Aftertone repo root whether this file lives at <repo>/.cursor/hooks/ or <repo>/py/.cursor/hooks/.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="${SCRIPT_DIR}"
-while [[ "${REPO}" != "/" ]]; do
-  if [[ -f "${REPO}/py/speak_summary_prepare.py" ]]; then
-    break
-  fi
-  REPO="$(dirname "${REPO}")"
-done
-if [[ ! -f "${REPO}/py/speak_summary_prepare.py" ]]; then
-  mkdir -p "${SCRIPT_DIR}/../hooks/state"
-  echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") speak_summary: could not find repo (no py/speak_summary_prepare.py above ${SCRIPT_DIR})" >>"${SCRIPT_DIR}/../hooks/state/speak_summary-hook.log" || true
+# shellcheck source=resolve_aftertone_repo.sh
+source "${SCRIPT_DIR}/resolve_aftertone_repo.sh"
+REPO=""
+if ! resolve_aftertone_repo "${SCRIPT_DIR}"; then
+  mkdir -p "${SCRIPT_DIR}/state"
+  echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") speak_summary: could not find Aftertone install (set AFTERTONE_INSTALL_DIR or run install.sh --global)" >>"${SCRIPT_DIR}/state/speak_summary-hook.log" || true
   exit 0
 fi
 export AFTERTONE_REPO="${REPO}"

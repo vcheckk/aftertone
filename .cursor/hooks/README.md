@@ -2,7 +2,12 @@
 
 This folder holds the **Cursor hook** scripts, **`hooks.json`**, and **`speak_summary.toml`** (single source of config for the hook + daemon control). State (PID, port, logs, spoken JSONL) lives in [`state/`](state/).
 
+### Global install (recommended)
+
+One `curl | bash` install registers **user-level** hooks (`~/.cursor/hooks.json`) that call into your clone (default `~/aftertone`). You do **not** need `.cursor/` in every project. See [README § Global install layout](../../README.md#global-install-layout).
+
 ---
+
 
 ## Change settings (slash commands only)
 

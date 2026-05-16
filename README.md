@@ -69,24 +69,20 @@ If you are searching for **local text-to-speech**, **on-device** assistants, **A
 
 ### One-line install
 
-Requires **git**. Installs to **`~/aftertone`** by default (clone + `uv sync` + model download).
+Requires **git**. Installs **once** to **`~/aftertone`** (clone + `uv sync` + model download) and registers **user-level Cursor hooks** so spoken TTS works in **every project** you open — no per-repo copy.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.sh | bash -s -- --install-uv --start-daemon
 ```
 
 Options (pass after `bash -s --`):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.sh | bash -s -- --install-uv --start-daemon
 curl -fsSL https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.sh | bash -s -- --dir ~/code/aftertone
+curl -fsSL https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.sh | bash -s -- --no-global   # skip ~/.cursor hooks
 ```
 
-Add hooks into **another project** (symlinks `assets/` from the install clone):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.sh | bash -s -- --into .
-```
+**Legacy:** copy hooks + `py/` into one repo (`--into .`) — only if you cannot use global hooks.
 
 See [`scripts/install.sh`](scripts/install.sh) and [`scripts/README.md`](scripts/README.md).
 
@@ -98,7 +94,7 @@ cd aftertone
 bash scripts/bootstrap.sh
 ```
 
-**Cursor:** open the install folder as the **workspace root** so project hooks load. Enable **Hooks**, **trust** the workspace, and confirm `.cursor/hooks.json` has `"version": 1`.
+**Cursor:** enable **Hooks** in Settings and **trust** each workspace where you want TTS. After a global install, hooks live in **`~/.cursor/hooks.json`** (not in every project). Slash commands are copied to **`~/.cursor/commands/`**; config still reads **`~/aftertone/.cursor/hooks/speak_summary.toml`**.
 
 - **Daemon:** `cd py && uv run python tts_daemon_ctl.py start --repo-root ..` then `status`
 - **Smoke (needs assets + audio):** `bash py/test_speak_summary_pipeline.sh`
@@ -108,13 +104,22 @@ bash scripts/bootstrap.sh
 
 Hooks and Python resolve the install root via **`AFTERTONE_REPO`** (preferred) or legacy **`SUPERTONIC_REPO`**.
 
-### Copy into another repo
+### Global install layout
 
-Use `install.sh --into .` or bring `.cursor/` + `py/` manually. Keep `speak_summary.toml` paths consistent (`../assets/onnx`, etc.).
+| Path | Purpose |
+|------|---------|
+| `~/aftertone/` | One clone: `py/`, `assets/`, config TOML, daemon |
+| `~/.cursor/hooks.json` | User hooks → `aftertone-speak_summary.sh` |
+| `~/.cursor/hooks/aftertone-install-dir` | Points at `~/aftertone` |
+| `~/.cursor/commands/aftertone-*.md` | Slash commands (any workspace) |
+
+### Copy into another repo (legacy)
+
+`install.sh --no-global --into .` duplicates hooks + `py/` in that repo. Prefer the global install above.
 
 ## Control (Cursor slash commands)
 
-Open this repo as the workspace root. In **Agent** chat, type **`/`** and pick an **`aftertone-`** command. That is the **supported** way to change spoken-TTS settings — do **not** hand-edit [`.cursor/hooks/speak_summary.toml`](.cursor/hooks/speak_summary.toml) for everyday changes.
+In **Agent** chat, type **`/`** and pick an **`aftertone-`** command (available in any workspace after global install). That is the **supported** way to change spoken-TTS settings — do **not** hand-edit [`.cursor/hooks/speak_summary.toml`](.cursor/hooks/speak_summary.toml) for everyday changes.
 
 | Command | What it does |
 |---------|----------------|

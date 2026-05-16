@@ -35,7 +35,8 @@ If they pick **other**, ask once for a code, then validate with `speak_summary_c
 ## Apply (after pick)
 
 ```bash
-uv run --directory py python speak_summary_config.py set lang CODE
+AFTERTONE_ROOT="$(bash "${HOME}/.cursor/hooks/aftertone-root.sh")"
+uv run --directory "${AFTERTONE_ROOT}/py" python speak_summary_config.py set lang CODE
 ```
 
 One-line reminder: `<spoken_summary>` should use that language.

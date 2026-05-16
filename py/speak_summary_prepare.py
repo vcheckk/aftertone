@@ -352,11 +352,9 @@ def main() -> None:
         print("{}")
         return
 
-    repo = Path(
-        os.environ.get("AFTERTONE_REPO", "").strip()
-        or os.environ.get("SUPERTONIC_REPO", "").strip()
-        or Path(__file__).resolve().parent.parent
-    ).resolve()
+    from aftertone_paths import resolve_repo_root
+
+    repo = resolve_repo_root()
     cfg_path = repo / ".cursor" / "hooks" / "speak_summary.toml"
     cfg = _load_toml(cfg_path)
     if not _cfg_enabled(cfg):
