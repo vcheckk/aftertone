@@ -78,6 +78,35 @@ class TestExtractSpokenSummary:
         raw = "before <spoken_summary>hello world</spoken_summary> after"
         assert _extract_spoken_summary(raw) == "hello world"
 
+    def test_prefers_last_block_when_multiple(self):
+        raw = (
+            "We updated `.cursor/rules/spoken-summary.mdc`.\n"
+            "<spoken_summary>Example from the docs, not for TTS.</spoken_summary>\n"
+            "More explanation about spoken_summary in prose.\n"
+            "<spoken_summary>The real briefing for the hook!!</spoken_summary>"
+        )
+        assert _extract_spoken_summary(raw) == "The real briefing for the hook!!"
+        body, state = _parse_spoken_summary(raw)
+        assert body == "The real briefing for the hook!!"
+        assert state is None
+
+    def test_does_not_span_open_in_code_to_final_close(self):
+        """Mention of <spoken_summary> in a code docstring must not eat the real closing tag."""
+        raw = (
+            "```121:126:py/speak_summary_prepare.py\n"
+            'def _parse_spoken_summary(raw: str) -> tuple[str | None, str | None]:\n'
+            '    """Return body from the **last** <spoken_summary> block."""\n'
+            "    matches = list(_SPOKEN_SUMMARY_BLOCK.finditer(raw))\n"
+            "```\n"
+            "Uses the last `<spoken_summary>…</spoken_summary>` block in the reply, "
+            "not the first.\n"
+            "So if an earlier part of the answer has an example tag, only the closing "
+            "tag is spoken.\n"
+            "Added a unit test for the multi-block case. 48 related tests pass.\n"
+            "<spoken_summary>The hook now takes the last block!!</spoken_summary>"
+        )
+        assert _extract_spoken_summary(raw) == "The hook now takes the last block!!"
+
     def test_state_attribute(self):
         raw = '<spoken_summary state="blocked">Daemon is down.</spoken_summary>'
         body, state = _parse_spoken_summary(raw)

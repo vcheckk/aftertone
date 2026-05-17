@@ -46,11 +46,15 @@
 ## Learned User Preferences
 
 - **Spoken summaries** should sound like a **hybrid pair-programmer briefing** for vibe coding: lead with **state** (what happened), add **significance** when it changes what to think, add a **next move** only for blockers, risk, tests, decisions, or clear actions — calm, direct tone; no file paths or filler in `<spoken_summary>`. For **livelier Supertonic delivery**, end **each sentence** inside the tag with `!!`, `??`, `?!`, or `!?` (vary them); do **not** use `state="..."` on the tag — inline expression tags were too subtle to hear.
+- For **`/aftertone-lang`**, **`/aftertone-speed`**, **`/aftertone-mode`**, and **`/aftertone-voice`** without a value in the message, the **first** tool call must be **AskQuestion** (picker immediately — no planning preamble or shell before the picker).
 - Voice pickers and status should show **human names with gender**, e.g. `Sara (female)` / `James (male)` (`py/voice_presets.py`); TOML still uses `M1`/`F4` ids.
 - Public README and site adapter tables should list only **Cursor, Claude Code, Codex, and OpenCode** (not other agent brands).
 - **Do not propose or integrate Microsoft VibeVoice**; user evaluated it locally and declined (heavy runtime vs staying on Supertonic ONNX).
+- **Claude Code without an Anthropic subscription:** user is exploring **free-claude-code** (NVIDIA NIM proxy for the model) stacked with Aftertone on a **Stop** hook; the Claude adapter is **not shipped** in this repo yet (see [CONTRIBUTING.md](CONTRIBUTING.md)).
 
 ## Learned Workspace Facts
 
 - **`py/` and `assets/` belong at the install/repo root**, not under `.cursor/` — `.cursor/` is the Cursor adapter (hooks, commands, rules, local state); the Python runtime and ONNX weights are shared across adapters.
 - Canonical first-time install: `curl -fsSL https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.sh | bash -s -- --install-uv --start-daemon` (global hooks + `~/aftertone` by default).
+- **`/aftertone-restart`** restarts the TTS daemon when **port**, **voice_***, **onnx_dir**, or **use_gpu** change; **lang**, **speed**, **enabled**, and **expression_mode** apply on the next hook without restart.
+- Repo **`speak_summary.toml` defaults:** `only_speak_spoken_summary = true`, `total_step = 8`, `expression_mode = "off"` (Supertonic inline expression tags disabled).

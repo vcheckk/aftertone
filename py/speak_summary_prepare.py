@@ -108,27 +108,45 @@ def _assistant_text_blocks(lines: list[str]) -> str:
     return "\n".join(texts)
 
 
-_SPOKEN_SUMMARY_BLOCK = re.compile(
-    r"<spoken_summary(\s[^>]*)?>\s*(.*?)\s*</spoken_summary>",
-    flags=re.DOTALL | re.IGNORECASE,
-)
+_SPOKEN_SUMMARY_OPEN = re.compile(r"<spoken_summary(\s[^>]*)?>", re.IGNORECASE)
+_SPOKEN_SUMMARY_CLOSE = re.compile(r"</spoken_summary>", re.IGNORECASE)
 _SPOKEN_STATE_ATTR = re.compile(
     r"""\bstate\s*=\s*["']?([a-z_]+)["']?""",
     flags=re.IGNORECASE,
 )
 
 
-def _parse_spoken_summary(raw: str) -> tuple[str | None, str | None]:
-    """Return (inner body, optional flow state from opening tag)."""
-    m = _SPOKEN_SUMMARY_BLOCK.search(raw)
-    if not m:
-        return None, None
-    attrs, inner = m.group(1) or "", (m.group(2) or "").strip()
+def _last_spoken_summary_span(raw: str) -> tuple[int, int, str, str | None] | None:
+    """
+    Locate the final well-formed tag pair by anchoring on the last closing tag,
+    then the nearest opening tag before it. Avoids regex spans that swallow prose
+    when an earlier mention of `<spoken_summary>` is not closed until the real tag.
+    """
+    closes = list(_SPOKEN_SUMMARY_CLOSE.finditer(raw))
+    if not closes:
+        return None
+    close_m = closes[-1]
+    close_start, close_end = close_m.start(), close_m.end()
+    opens = [m for m in _SPOKEN_SUMMARY_OPEN.finditer(raw[:close_start])]
+    if not opens:
+        return None
+    open_m = opens[-1]
+    attrs = open_m.group(1) or ""
+    inner = raw[open_m.end() : close_start].strip()
     state: str | None = None
     if attrs:
         sm = _SPOKEN_STATE_ATTR.search(attrs)
         if sm:
             state = sm.group(1).lower()
+    return open_m.start(), close_end, inner, state
+
+
+def _parse_spoken_summary(raw: str) -> tuple[str | None, str | None]:
+    """Return (inner body, optional flow state) from the last <spoken_summary> pair."""
+    span = _last_spoken_summary_span(raw)
+    if not span:
+        return None, None
+    _start, _end, inner, state = span
     if not inner:
         return None, state
     return inner, state
@@ -140,13 +158,15 @@ def _extract_spoken_summary(raw: str) -> str | None:
 
 
 def _without_spoken_block(raw: str) -> str:
-    """Remove tag block so markdown heuristics do not mangle `spoken_summary` underscores."""
-    return re.sub(
-        r"<spoken_summary>\s*[\s\S]*?\s*</spoken_summary>",
-        " ",
-        raw,
-        flags=re.DOTALL | re.IGNORECASE,
-    ).strip()
+    """Remove all well-formed tag pairs (last pair first) for heuristic fallback text."""
+    out = raw
+    while True:
+        span = _last_spoken_summary_span(out)
+        if not span:
+            break
+        start, end, _inner, _state = span
+        out = (out[:start] + " " + out[end:]).strip()
+    return out
 
 
 def _demote_code_fences(raw: str) -> str:
