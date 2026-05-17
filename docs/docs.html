@@ -95,7 +95,9 @@
             <tr><td><code>/aftertone-lang</code></td><td>Language (syncs agent spoken-summary rule)</td><td>No</td></tr>
             <tr><td><code>/aftertone-speed</code></td><td>Playback speed</td><td>No</td></tr>
             <tr><td><code>/aftertone-mode</code></td><td><code>queue</code> or <code>interrupt</code></td><td>No</td></tr>
+            <tr><td><code>/aftertone-expression</code></td><td>Inline Supertonic expression tags (<code>off</code> default; optional <code>subtle</code> / <code>expressive</code>)</td><td>No</td></tr>
             <tr><td><code>/aftertone-voice</code></td><td>Voice picker (human names, e.g. Sara (female), James (male))</td><td><strong>Yes</strong> (command restarts for you)</td></tr>
+            <tr><td><code>/aftertone-restart</code></td><td>Reload daemon after <code>port</code>, <code>voice_*</code>, <code>onnx_dir</code>, or <code>use_gpu</code> change</td><td><strong>Yes</strong></td></tr>
           </tbody>
         </table>
       </div>
@@ -131,6 +133,7 @@
       </div>
 
       <h2 id="daemon">Daemon commands</h2>
+      <p>In Agent chat, <code>/aftertone-restart</code> runs the same reload as the CLI below (use after changing voice, port, ONNX path, or GPU). <code>/aftertone-voice</code> also restarts for you.</p>
       <p>Run from <code>py/</code> with <code>--repo-root ..</code> (one level up to the repo root):</p>
       <div class="code-block">
         <pre><code>cd py
@@ -146,7 +149,7 @@ uv run python tts_daemon_ctl.py stop --repo-root ..</code></pre>
             <tr><th>Change in TOML</th><th>Need restart?</th></tr>
           </thead>
           <tbody>
-            <tr><td><code>speed</code>, <code>lang</code>, <code>total_step</code>, <code>mode</code>, <code>quiet_hours</code>, text limits, heuristics</td><td>No — read each hook run</td></tr>
+            <tr><td><code>speed</code>, <code>lang</code>, <code>total_step</code>, <code>mode</code>, <code>expression_mode</code>, <code>quiet_hours</code>, text limits, heuristics</td><td>No — read each hook run</td></tr>
             <tr><td><code>port</code>, <code>onnx_dir</code>, <code>voice_*</code>, <code>use_gpu</code></td><td><strong>Yes</strong> — <code>restart</code></td></tr>
           </tbody>
         </table>
@@ -172,7 +175,9 @@ uv run python tts_daemon_ctl.py stop --repo-root ..</code></pre>
             <tr><td><code>speed</code></td><td>Playback speed (1.0 = baseline)</td></tr>
             <tr><td><code>quiet_hours</code></td><td>e.g. <code>22:00-08:00</code> — no speech in that window (local clock)</td></tr>
             <tr><td><code>spoken_summary_max_chars</code></td><td>Cap for tag text (default 360)</td></tr>
-            <tr><td><code>only_speak_spoken_summary</code></td><td><code>true</code> = never use heuristic fallback</td></tr>
+            <tr><td><code>only_speak_spoken_summary</code></td><td><code>true</code> (repo default) = only the tag is spoken</td></tr>
+            <tr><td><code>total_step</code></td><td>ONNX denoising steps (default <strong>8</strong> — quality vs CPU)</td></tr>
+            <tr><td><code>expression_mode</code></td><td><code>off</code> default; optional inline tags via <code>/aftertone-expression</code></td></tr>
           </tbody>
         </table>
       </div>
@@ -180,12 +185,13 @@ uv run python tts_daemon_ctl.py stop --repo-root ..</code></pre>
       <p><code>/aftertone-lang</code> updates <code>lang</code> and syncs the Cursor rule automatically. Manual sync from repo root: <code>uv run --directory py python sync_spoken_rule_lang.py</code></p>
 
       <h2 id="spoken-summary">Spoken summaries</h2>
-      <p>Best quality comes from a deliberate tag at the end of the agent message:</p>
+      <p>Best quality is a <strong>flow briefing</strong> for vibe coding: what happened, why it matters, optional next move — not a changelog. Put <strong>one</strong> tag at the <strong>very end</strong> of substantive replies:</p>
       <pre><code>&lt;spoken_summary&gt;
-Short line written for listening, in the same language as lang in speak_summary.toml.
+Tests pass and the daemon is restarted!! Your next reply should sound cleaner??
 &lt;/spoken_summary&gt;</code></pre>
-      <p><strong>Without the tag,</strong> prepare may use one or two heuristic sentences (shorter when the reply is mostly code fences). Set <code>only_speak_spoken_summary = true</code> if you never want English (or other) fallback when <code>lang</code> is not English.</p>
-      <p>Rules for agents live in <a href="https://github.com/omarelkhal/aftertone/blob/main/.cursor/rules/spoken-summary.mdc"><code>.cursor/rules/spoken-summary.mdc</code></a>.</p>
+      <p>The hook uses the <strong>last</strong> <code>&lt;/spoken_summary&gt;</code> and pairs it with the nearest opening tag before it. Do not leave a bare <code>&lt;spoken_summary&gt;</code> in code or prose above your real tag (that can swallow the wrong text).</p>
+      <p>Repo default <code>only_speak_spoken_summary = true</code> — no heuristic fallback when the tag is missing. For livelier delivery, end <strong>each sentence</strong> in the tag with <code>!!</code>, <code>??</code>, <code>?!</code>, or <code>!?</code>. Inline <code>&lt;sigh&gt;</code> tags are optional via <code>/aftertone-expression</code> (default <code>off</code>).</p>
+      <p>Rules for agents: <a href="https://github.com/omarelkhal/aftertone/blob/main/.cursor/rules/spoken-summary.mdc"><code>.cursor/rules/spoken-summary.mdc</code></a>.</p>
 
       <h2 id="troubleshooting">Troubleshooting</h2>
       <div class="cards">
@@ -199,7 +205,11 @@ Short line written for listening, in the same language as lang in speak_summary.
         </article>
         <article class="card">
           <h3>TOML change had no effect</h3>
-          <p>Voice, port, GPU, and ONNX path need <code>tts_daemon_ctl.py restart</code>. Speed and lang apply per request without restart.</p>
+          <p>Voice, port, GPU, and ONNX path need <code>/aftertone-restart</code> or <code>tts_daemon_ctl.py restart</code>. Speed, lang, and <code>expression_mode</code> apply on the next hook without restart.</p>
+        </article>
+        <article class="card">
+          <h3>Wrong text spoken</h3>
+          <p>Usually an unclosed <code>&lt;spoken_summary&gt;</code> mention earlier in the reply, or no tag at the end. Put only one closing block at the bottom; check <code>only_speak_spoken_summary</code>.</p>
         </article>
         <article class="card">
           <h3>Quiet hours</h3>

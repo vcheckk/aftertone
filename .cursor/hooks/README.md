@@ -19,10 +19,12 @@ Use **Agent** chat slash commands in [`../commands/`](../commands/) — do **not
 | `/aftertone-lang` | `lang` + sync [spoken-summary rule](../rules/spoken-summary.mdc) |
 | `/aftertone-speed` | `speed` |
 | `/aftertone-mode` | `mode` (`queue` / `interrupt`) |
+| `/aftertone-expression` | `expression_mode` (`off` default — optional `<sigh>` / `<breath>` from `state=` on tag) |
 | `/aftertone-voice` | `voice_type` (human names like Sara (female) → `F4`; **daemon restart**) |
+| `/aftertone-restart` | **Daemon restart** (voice, port, ONNX path, GPU — same as `tts_daemon_ctl.py restart`) |
 | `/aftertone-status` | Read current values + daemon |
 
-`enabled`, `lang`, `speed`, and `mode` apply on the **next** hook run. **Voice** / **port** / **onnx_dir** / **use_gpu** need a **daemon restart** (the voice command does that for you).
+`enabled`, `lang`, `speed`, `mode`, and `expression_mode` apply on the **next** hook run. **Voice** / **port** / **onnx_dir** / **use_gpu** need a **daemon restart** (`/aftertone-voice` or **`/aftertone-restart`**).
 
 Turning TTS off does not stop the daemon; use **`tts_daemon_ctl.py stop`** below if you want no loaded models.
 
@@ -37,9 +39,11 @@ Aftertone is meant for **vibe coding**: you stay in flow while the agent works, 
 | **`<spoken_summary>…</spoken_summary>`** (written by the agent) | A deliberate **flow briefing**: state, significance, optional next move. Best quality and tone. |
 | **Heuristic fallback** (first sentences of the reply) | Trimmed assistant prose. Can sound like a random excerpt, not a briefing. Disabled when **`only_speak_spoken_summary = true`** (default in this repo). |
 
-**Agents:** follow [`.cursor/rules/spoken-summary.mdc`](../rules/spoken-summary.mdc) — hybrid pair-programmer voice, no file paths in the tag, next step only when it helps (blockers, risk, tests, decisions).
+**Agents:** follow [`.cursor/rules/spoken-summary.mdc`](../rules/spoken-summary.mdc) — hybrid pair-programmer voice, no file paths in the tag, next step only when it helps (blockers, risk, tests, decisions). End **each sentence** in the tag with `!!`, `??`, `?!`, or `!?` for livelier Supertonic delivery. Put the tag **only at the end** of the message; do not leave bare `<spoken_summary>` in code citations without a matching close on the same line.
 
-**Users:** if speech feels useless or robotic, check that agents emit the tag on substantive replies; tune voice and `total_step` in TOML, not the programming language of `py/`.
+**Extraction:** `speak_summary_prepare.py` uses the **last** `</spoken_summary>` in the reply and pairs it with the nearest `<spoken_summary>` before it — avoids swallowing prose when the tag is mentioned earlier.
+
+**Users:** if speech feels useless or robotic, check that agents emit the tag on substantive replies; tune voice and `total_step` (default **8**) in TOML, not the programming language of `py/`. If the wrong paragraph is spoken, look for an unclosed tag mention above the real closing block.
 
 ---
 
@@ -74,7 +78,7 @@ uv run python tts_daemon_ctl.py restart --repo-root ..
 | Keys | When they apply | Need `restart`? |
 |------|------------------|-----------------|
 | **`enabled`**, **`quiet_hours`**, **`min_chars`**, **`max_chars`**, **`spoken_summary_max_chars`**, **`heuristic_max_chars`**, **`plain_excerpt_max_chars`**, **`heuristic_max_sentences`**, **`heuristic_code_fence_fraction`**, **`heuristic_max_sentences_code_heavy`**, **`only_speak_spoken_summary`** | Read **every** hook run by `speak_summary_prepare.py` — they control **whether** to speak and **which text** is chosen (not sent as separate fields on `/say`). | **No** |
-| **`speed`**, **`lang`**, **`total_step`**, **`mode`** | Read every hook run; included in the **`POST /say`** JSON body. | **No** |
+| **`speed`**, **`lang`**, **`total_step`**, **`mode`**, **`expression_mode`** | Read every hook run; included in the **`POST /say`** JSON body (expression applied in prepare). | **No** |
 | **`port`**, **`onnx_dir`**, **`voice_style`**, **`voice_type`**, **`use_gpu`** | Read only when **`tts_daemon`** **starts** (`tts_daemon_ctl.py start`). Models and voice JSON load once. | **Yes** — `restart` (or `stop` then `start`). |
 
 **Port file caveat:** While the daemon is running, `speak_summary.sh` prefers **`state/tts-daemon.port`** over re-parsing TOML for the **HTTP port**. If you change `port` in TOML but do not restart, the hook still posts to the **old** port until `restart` updates the file. A **`port_mismatch`** line is written to `state/speak_summary-hook.log` when TOML `port` ≠ port file.

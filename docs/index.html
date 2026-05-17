@@ -120,7 +120,7 @@
           </article>
           <article class="card">
             <h3>Slash commands</h3>
-            <p>In Cursor Agent chat, use <code>/aftertone-voice</code>, <code>/aftertone-lang</code>, and more — no hand-editing TOML.</p>
+            <p><code>/aftertone-lang</code>, <code>/aftertone-voice</code>, <code>/aftertone-restart</code>, <code>/aftertone-status</code>, and more — no hand-editing TOML.</p>
           </article>
         </div>
       </div>
@@ -131,17 +131,18 @@
         <div class="section-head">
           <span class="pill">For agents</span>
           <h2>Better summaries with <code>&lt;spoken_summary&gt;</code></h2>
-          <p>Agents can end replies with a short tag written for listening — not for the screen.</p>
+          <p>End substantive replies with one short <strong>flow briefing</strong> — state, significance, optional next move — written for listening, not the screen.</p>
         </div>
         <div class="code-block">
-          <div class="code-label">Example (end of agent message)</div>
+          <div class="code-label">Example (last lines of the agent message)</div>
           <pre><code>&lt;spoken_summary&gt;
-We switched the voice to Sara and set the spoken language to French with slash commands.
+The hook fix is on main!! Send another reply with only one tag at the end??
 &lt;/spoken_summary&gt;</code></pre>
         </div>
         <p style="color: var(--muted); font-size: 0.95rem; max-width: 40rem;">
-          Set language with <code>/aftertone-lang</code>; write the tag in that language. The hook does not translate.
-          See <a href="docs.html#spoken-summary">spoken summary rules</a>.
+          Set language with <code>/aftertone-lang</code>; write the tag in that language (no auto-translation).
+          The hook reads the <strong>last</strong> tag pair only. Use <code>!!</code> / <code>??</code> per sentence for livelier TTS.
+          <a href="docs.html#spoken-summary">Spoken summary rules</a> · <a href="docs.html#slash-commands">Slash commands</a>.
         </p>
       </div>
     </section>

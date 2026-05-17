@@ -54,7 +54,10 @@ If you are searching for **local text-to-speech**, **on-device** assistants, **A
 
 ## Features (today)
 
-- **Cursor:** `afterAgentResponse` → optional TTS from inline reply text (prefers `<spoken_summary>…</spoken_summary>`).
+- **Cursor:** `afterAgentResponse` → optional TTS from inline reply text (prefers the **last** `<spoken_summary>…</spoken_summary>` at the end of the reply).
+- **Flow briefings:** agents write a short listening line (state, why it matters, optional next move) — see [spoken-summary rule](.cursor/rules/spoken-summary.mdc). Repo default: **`only_speak_spoken_summary = true`** (no heuristic fallback).
+- **Livelier delivery:** end each sentence in the tag with `!!`, `??`, `?!`, or `!?` (Supertonic prosody); **`expression_mode = "off"`** by default (inline `<sigh>` tags are optional via `/aftertone-expression`).
+- **Slash commands** in Agent chat (`/aftertone-lang`, `/aftertone-voice`, `/aftertone-restart`, …) — no hand-editing TOML for everyday changes.
 - `speak_summary_prepare.py` → JSON for `POST /say`; `tts_daemon.py` → localhost server.
 - Optional `stop` hook trace for debugging.
 - `bash scripts/bootstrap.sh` — `uv sync`, Hugging Face assets if `assets/onnx/` is missing.
@@ -121,19 +124,27 @@ Hooks and Python resolve the install root via **`AFTERTONE_REPO`** (preferred) o
 
 In **Agent** chat, type **`/`** and pick an **`aftertone-`** command (available in any workspace after global install). That is the **supported** way to change spoken-TTS settings — do **not** hand-edit [`.cursor/hooks/speak_summary.toml`](.cursor/hooks/speak_summary.toml) for everyday changes.
 
-| Command | What it does |
-|---------|----------------|
-| `/aftertone-toggle` | Flip spoken TTS on/off |
-| `/aftertone-on` / `/aftertone-off` | Force on or off |
-| `/aftertone-status` | Current settings + daemon health |
-| `/aftertone-lang` | Pick language (syncs [spoken-summary rule](.cursor/rules/spoken-summary.mdc)) |
-| `/aftertone-speed` | Pick playback speed |
-| `/aftertone-mode` | Pick `queue` or `interrupt` |
-| `/aftertone-voice` | Pick a voice (e.g. Sara (female), James (male)) → restarts daemon |
+| Command | What it does | Daemon restart? |
+|---------|----------------|-----------------|
+| `/aftertone-toggle` | Flip spoken TTS on/off | No |
+| `/aftertone-on` / `/aftertone-off` | Force on or off | No |
+| `/aftertone-status` | Current settings + daemon health | No |
+| `/aftertone-lang` | Pick language (syncs [spoken-summary rule](.cursor/rules/spoken-summary.mdc)) | No |
+| `/aftertone-speed` | Pick playback speed | No |
+| `/aftertone-mode` | Pick `queue` or `interrupt` | No |
+| `/aftertone-expression` | Supertonic inline expression tags (`off` / `subtle` / …); repo default **`off`** | No |
+| `/aftertone-voice` | Pick a voice (e.g. Sara (female), James (male)) | **Yes** (command restarts for you) |
+| `/aftertone-restart` | Reload daemon after **port**, **voice**, **onnx_dir**, or **use_gpu** changes | **Yes** |
 
 Command definitions: [`.cursor/commands/`](.cursor/commands/).
 
-**Daemon (start/stop, not everyday config):** `cd py && uv run python tts_daemon_ctl.py {start|stop|status|restart} --repo-root ..` — see [`.cursor/hooks/README.md`](.cursor/hooks/README.md). Turning TTS **off** via `/aftertone-off` does not unload models; use **stop** when you want silence and no GPU/RAM use.
+**Daemon CLI (advanced):** `cd py && uv run python tts_daemon_ctl.py {start|stop|status|restart} --repo-root ..` — see [`.cursor/hooks/README.md`](.cursor/hooks/README.md). Prefer **`/aftertone-restart`** in Agent chat when voice or port changed. Turning TTS **off** via `/aftertone-off` does not unload models; use **stop** when you want silence and no GPU/RAM use.
+
+### Spoken summaries (agents)
+
+Put **one** `<spoken_summary>…</spoken_summary>` block at the **very end** of substantive replies (plain language, same language as TOML `lang`). The hook pairs the **last** closing tag with the nearest opening tag before it — so do not leave an unclosed `<spoken_summary>` mention in code or prose above your real tag.
+
+For **vibe coding**, write a hybrid pair-programmer briefing: what happened, why it matters, optional next move. For livelier TTS, end **each sentence** in the tag with `!!`, `??`, `?!`, or `!?`. Full guidance: [`.cursor/rules/spoken-summary.mdc`](.cursor/rules/spoken-summary.mdc).
 
 ## Configuration
 
