@@ -7,16 +7,48 @@ import argparse
 import json
 import shutil
 import stat
+import sys
 from pathlib import Path
 
 _AFTER_AGENT = "afterAgentResponse"
-_CMD = "bash ./hooks/aftertone-speak_summary.sh"
+_CMD_UNIX = "bash ./hooks/aftertone-speak_summary.sh"
+_CMD_WIN = r".\hooks\aftertone-speak_summary.cmd"
+
+
+def _hook_command() -> str:
+    return _CMD_WIN if sys.platform == "win32" else _CMD_UNIX
+
+
+def _fragment_path(template_dir: Path) -> Path:
+    if sys.platform == "win32":
+        win = template_dir / "hooks.windows.json"
+        if win.is_file():
+            return win
+    return template_dir / "hooks.json"
+
+
+def _strip_aftertone_entries(hooks: dict) -> dict:
+    """Remove prior Aftertone hook commands so OS switches do not stack duplicates."""
+    out: dict = {}
+    for event, entries in hooks.items():
+        if not isinstance(entries, list):
+            out[event] = entries
+            continue
+        kept = [
+            e
+            for e in entries
+            if isinstance(e, dict)
+            and "aftertone-speak_summary" not in (e.get("command") or "")
+        ]
+        if kept:
+            out[event] = kept
+    return out
 
 
 def _merge_hooks(existing: dict, fragment: dict) -> dict:
     out = dict(existing)
     out["version"] = max(int(out.get("version", 1)), int(fragment.get("version", 1)))
-    hooks = dict(out.get("hooks") or {})
+    hooks = _strip_aftertone_entries(dict(out.get("hooks") or {}))
     frag_hooks = fragment.get("hooks") or {}
     for event, entries in frag_hooks.items():
         cur = list(hooks.get(event) or [])
@@ -44,7 +76,8 @@ def install_global(*, install_dir: Path, dry_run: bool = False) -> None:
     user_hooks_json = user_cursor / "hooks.json"
     template_dir = install_dir / "scripts" / "cursor-global"
     wrapper_src = template_dir / "aftertone-speak_summary.sh"
-    fragment_src = template_dir / "hooks.json"
+    wrapper_cmd_src = template_dir / "aftertone-speak_summary.cmd"
+    fragment_src = _fragment_path(template_dir)
     root_sh_src = install_dir / "scripts" / "aftertone-root.sh"
 
     if not wrapper_src.is_file() or not fragment_src.is_file():
@@ -61,12 +94,21 @@ def install_global(*, install_dir: Path, dry_run: bool = False) -> None:
 
     dest_wrapper = user_hooks / "aftertone-speak_summary.sh"
     shutil.copy2(wrapper_src, dest_wrapper)
-    dest_wrapper.chmod(dest_wrapper.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    if sys.platform != "win32":
+        dest_wrapper.chmod(
+            dest_wrapper.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+        )
+
+    if sys.platform == "win32" and wrapper_cmd_src.is_file():
+        shutil.copy2(wrapper_cmd_src, user_hooks / "aftertone-speak_summary.cmd")
 
     if root_sh_src.is_file():
         dest_root = user_hooks / "aftertone-root.sh"
         shutil.copy2(root_sh_src, dest_root)
-        dest_root.chmod(dest_root.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+        if sys.platform != "win32":
+            dest_root.chmod(
+                dest_root.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+            )
 
     fragment = json.loads(fragment_src.read_text(encoding="utf-8"))
     if user_hooks_json.is_file():
@@ -92,8 +134,9 @@ def install_global(*, install_dir: Path, dry_run: bool = False) -> None:
         user_rules.mkdir(parents=True, exist_ok=True)
         shutil.copy2(rule_src, user_rules / "spoken-summary.mdc")
 
+    cmd = _hook_command()
     has_aftertone = any(
-        isinstance(e, dict) and e.get("command") == _CMD
+        isinstance(e, dict) and e.get("command") == cmd
         for e in (merged.get("hooks") or {}).get(_AFTER_AGENT, [])
     )
     print(f"Global Cursor hooks: {user_hooks_json}")

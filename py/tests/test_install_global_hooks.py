@@ -38,6 +38,7 @@ def test_install_global_writes_files(tmp_path: Path, monkeypatch) -> None:
     fake_home = tmp_path / "home"
     fake_home.mkdir()
     monkeypatch.setenv("HOME", str(fake_home))
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: fake_home))
 
     install = tmp_path / "aftertone"
     (install / "py").mkdir(parents=True)
@@ -73,5 +74,48 @@ def test_install_global_writes_files(tmp_path: Path, monkeypatch) -> None:
     hooks = json.loads((fake_home / ".cursor/hooks.json").read_text())
     assert any(
         e.get("command") == "bash ./hooks/aftertone-speak_summary.sh"
+        for e in hooks["hooks"]["afterAgentResponse"]
+    )
+
+
+def test_install_global_windows_cmd(tmp_path: Path, monkeypatch) -> None:
+    fake_home = tmp_path / "home"
+    fake_home.mkdir()
+    monkeypatch.setenv("HOME", str(fake_home))
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: fake_home))
+    monkeypatch.setattr("install_global_hooks.sys.platform", "win32")
+
+    install = tmp_path / "aftertone"
+    (install / "py").mkdir(parents=True)
+    (install / "py" / "speak_summary_prepare.py").write_text("# stub\n")
+    tpl = install / "scripts/cursor-global"
+    tpl.mkdir(parents=True)
+    (tpl / "aftertone-speak_summary.sh").write_text("#!/bin/bash\nexit 0\n", encoding="utf-8")
+    (tpl / "aftertone-speak_summary.cmd").write_text("@echo off\n", encoding="utf-8")
+    (tpl / "hooks.windows.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "hooks": {
+                    "afterAgentResponse": [
+                        {
+                            "command": r".\hooks\aftertone-speak_summary.cmd",
+                            "timeout": 8,
+                        }
+                    ],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (install / ".cursor/hooks/speak_summary.sh").parent.mkdir(parents=True)
+    (install / ".cursor/hooks/speak_summary.sh").write_text("# stub\n")
+
+    install_global(install_dir=install)
+
+    assert (fake_home / ".cursor/hooks/aftertone-speak_summary.cmd").is_file()
+    hooks = json.loads((fake_home / ".cursor/hooks.json").read_text())
+    assert any(
+        e.get("command") == r".\hooks\aftertone-speak_summary.cmd"
         for e in hooks["hooks"]["afterAgentResponse"]
     )

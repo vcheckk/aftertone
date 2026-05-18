@@ -21,8 +21,16 @@ if ! command -v uv >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "==> bootstrap: uv sync (Python deps + venv under py/)"
-(cd "${PY}" && uv sync)
+if [[ -f "${PY}/.python-version" ]]; then
+  PY_VER="$(tr -d ' \n\r' <"${PY}/.python-version")"
+  echo "==> bootstrap: ensuring Python ${PY_VER} (onnxruntime wheels)…"
+  (cd "${PY}" && uv python install "${PY_VER}")
+  echo "==> bootstrap: uv sync (Python deps + venv under py/)"
+  (cd "${PY}" && uv sync --python "${PY_VER}")
+else
+  echo "==> bootstrap: uv sync (Python deps + venv under py/)"
+  (cd "${PY}" && uv sync)
+fi
 
 if [[ "${SKIP_ASSETS:-}" != "1" ]]; then
   EXTRA=()

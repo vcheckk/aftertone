@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterAgentResponse": [
+      {
+        "command": ".\\hooks\\aftertone-speak_summary.cmd",
+        "timeout": 8
+      }
+    ]
+  }
+}

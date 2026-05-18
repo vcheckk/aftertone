@@ -1,21 +1,34 @@
 # `scripts/`
 
-- **`install.sh`** — one-line install (clone or update, then bootstrap). See [README](../README.md#one-line-install).
-- **`bootstrap.sh`** — from repo root: `uv sync` in `py/`, download `Supertone/supertonic-3` into `assets/` when ONNX files are missing, optional `npm install` in `web/` if that directory exists.
+| Script | Platform | Role |
+|--------|----------|------|
+| **`install.sh`** | Linux / macOS | One-line install (clone or update, bootstrap, global hooks). [README](../README.md#linux--macos--one-line-install) |
+| **`install.ps1`** | Windows | Same flow in PowerShell. [README](../README.md#windows--one-line-install) |
+| **`bootstrap.sh`** | Linux / macOS | `uv sync` in `py/`, download `Supertone/supertonic-3` into `assets/` when missing |
+| **`bootstrap.ps1`** | Windows | Same as `bootstrap.sh` (no bash required) |
 
-## `install.sh` options
+Python **3.13** is pinned in `py/.python-version` (onnxruntime wheels; avoid system Python 3.14+ on Windows).
 
-| Flag | Meaning |
-|------|---------|
-| `--dir PATH` | Clone location (default `~/aftertone`) |
-| `--global` | Register user hooks in `~/.cursor/` (default) |
-| `--no-global` | Skip `~/.cursor/hooks.json` registration |
-| `--into PATH` | **Legacy:** copy hooks + `py/` into another repo; symlink `assets/` |
-| `--branch NAME` | Git branch (default `main`) |
-| `--skip-assets` | Skip model download |
-| `--start-daemon` | Run `tts_daemon_ctl.py start` after bootstrap |
-| `--install-uv` | Install [uv](https://docs.astral.sh/uv/) via Astral script if missing |
+## `install.sh` / `install.ps1` options
+
+| `install.sh` | `install.ps1` | Meaning |
+|--------------|---------------|---------|
+| `--dir PATH` | `-InstallDir PATH` | Clone location (default `~/aftertone` or `%USERPROFILE%\aftertone`) |
+| `--global` | (default) | Register user hooks in `.cursor/` |
+| `--no-global` | `-NoGlobal` | Skip `.cursor/hooks.json` registration |
+| `--into PATH` | — | **Legacy (bash only):** copy hooks + `py/` into another repo |
+| `--branch NAME` | `-Branch NAME` | Git branch (default `main`) |
+| `--skip-assets` | `-SkipAssets` | Skip model download |
+| `--start-daemon` | `-StartDaemon` | Run `tts_daemon_ctl.py start` after bootstrap |
+| `--install-uv` | `-InstallUv` | Install [uv](https://docs.astral.sh/uv/) if missing |
 
 Env: `AFTERTONE_INSTALL_DIR`, `AFTERTONE_REPO_URL`, `AFTERTONE_BRANCH`.
 
-`bootstrap.sh` env: `SKIP_ASSETS=1`, `SKIP_WEB=1`, `FORCE_ASSETS=1`.
+`bootstrap.sh` / `bootstrap.ps1` env: `SKIP_ASSETS=1`, `SKIP_WEB=1`, `FORCE_ASSETS=1`.
+
+## Windows prerequisites
+
+- [Git for Windows](https://git-scm.com/download/win) — `git` and **Git Bash** (`bash.exe`) for Cursor hook scripts
+- [uv](https://docs.astral.sh/uv/) — or pass `-InstallUv` on `install.ps1`
+
+User hooks on Windows use `.\hooks\aftertone-speak_summary.cmd`, which calls Git Bash and the real `speak_summary.sh` under your install dir.

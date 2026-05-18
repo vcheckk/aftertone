@@ -57,12 +57,16 @@
 
       <div class="hero-install" id="install">
         <div class="code-block">
-          <div class="code-label">One command — clone, deps, models, daemon</div>
+          <div class="code-label">Linux / macOS</div>
           <pre><code>curl -fsSL https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.sh | bash -s -- --install-uv --start-daemon</code></pre>
         </div>
+        <div class="code-block" style="margin-top: 1rem;">
+          <div class="code-label">Windows (PowerShell)</div>
+          <pre><code>irm https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.ps1 | iex</code></pre>
+        </div>
         <p class="hero-install-note">
-          Installs to <code>~/aftertone</code>. Then open that folder in Cursor (trusted workspace, Hooks on) and run
-          <code>/aftertone-on</code> in Agent chat.
+          Installs to <code>~/aftertone</code> or <code>%USERPROFILE%\aftertone</code> (needs Git for Windows on Windows).
+          Then open that folder in Cursor (trusted workspace, Hooks on) and run <code>/aftertone-on</code> in Agent chat.
         </p>
       </div>
 

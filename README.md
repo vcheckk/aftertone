@@ -64,19 +64,22 @@ If you are searching for **local text-to-speech**, **on-device** assistants, **A
 - **Slash commands** in Agent chat (`/aftertone-lang`, `/aftertone-voice`, `/aftertone-restart`, …) — no hand-editing TOML for everyday changes.
 - `speak_summary_prepare.py` → JSON for `POST /say`; `tts_daemon.py` → localhost server.
 - Optional `stop` hook trace for debugging.
-- `bash scripts/bootstrap.sh` — `uv sync`, Hugging Face assets if `assets/onnx/` is missing.
+- `bash scripts/bootstrap.sh` or `scripts/bootstrap.ps1` (Windows) — `uv sync`, Hugging Face assets if `assets/onnx/` is missing.
 
 ## Requirements
 
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - **Cursor (current adapter):** Hooks on, **trusted** workspace, `.cursor/hooks.json` with `"version": 1`.
 - ONNX weights under `./assets` (`Supertone/supertonic-3` — bootstrap downloads them).
+- **Windows:** [Git for Windows](https://git-scm.com/download/win) (Git Bash runs hook scripts). Python **3.13** is pinned via `py/.python-version` (onnxruntime has no 3.14 wheels yet).
 
 ## Quick start
 
-### One-line install
+Install **once** to a fixed folder (`~/aftertone` or `%USERPROFILE%\aftertone`), register **user-level Cursor hooks**, then use spoken TTS in **every project** you open.
 
-Requires **git**. Installs **once** to **`~/aftertone`** (clone + `uv sync` + model download) and registers **user-level Cursor hooks** so spoken TTS works in **every project** you open — no per-repo copy.
+### Linux / macOS — one-line install
+
+Requires **git** and **bash**.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.sh | bash -s -- --install-uv --start-daemon
@@ -89,11 +92,29 @@ curl -fsSL https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/i
 curl -fsSL https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.sh | bash -s -- --no-global   # skip ~/.cursor hooks
 ```
 
-**Legacy:** copy hooks + `py/` into one repo (`--into .`) — only if you cannot use global hooks.
+### Windows — one-line install
 
-See [`scripts/install.sh`](scripts/install.sh) and [`scripts/README.md`](scripts/README.md).
+Requires **git** and **Git Bash** (included with [Git for Windows](https://git-scm.com/download/win)). Run in **PowerShell**:
+
+```powershell
+irm https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.ps1 | iex
+```
+
+With options (download script first, then invoke):
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.ps1))) -InstallUv -StartDaemon
+```
+
+Default install dir: **`%USERPROFILE%\aftertone`**. Hooks: **`%USERPROFILE%\.cursor\hooks.json`**.
+
+**Legacy:** copy hooks + `py/` into one repo (`--into .` on Linux, or `--no-global` on Windows) — only if you cannot use global hooks.
+
+See [`scripts/install.sh`](scripts/install.sh), [`scripts/install.ps1`](scripts/install.ps1), and [`scripts/README.md`](scripts/README.md).
 
 ### Manual clone
+
+**Linux / macOS:**
 
 ```bash
 git clone https://github.com/omarelkhal/aftertone.git
@@ -101,11 +122,19 @@ cd aftertone
 bash scripts/bootstrap.sh
 ```
 
-**Cursor:** enable **Hooks** in Settings and **trust** each workspace where you want TTS. After a global install, hooks live in **`~/.cursor/hooks.json`** (not in every project). Slash commands are copied to **`~/.cursor/commands/`**; config still reads **`~/aftertone/.cursor/hooks/speak_summary.toml`**.
+**Windows (PowerShell):**
+
+```powershell
+git clone https://github.com/omarelkhal/aftertone.git
+cd aftertone
+powershell -ExecutionPolicy Bypass -File scripts/bootstrap.ps1
+```
+
+**Cursor:** enable **Hooks** in Settings and **trust** each workspace where you want TTS. After a global install, hooks live in your user **`.cursor/hooks.json`** (not in every project). Slash commands are copied to **`.cursor/commands/`**; config still reads **`<install-dir>/.cursor/hooks/speak_summary.toml`** (default install dir above).
 
 - **Daemon:** `cd py && uv run python tts_daemon_ctl.py start --repo-root ..` then `status`
-- **Smoke (needs assets + audio):** `bash py/test_speak_summary_pipeline.sh`
-- **Diagnostics:** `bash py/diagnose_speak_hooks.sh`
+- **Smoke (needs assets + audio):** `bash py/test_speak_summary_pipeline.sh` (Git Bash on Windows)
+- **Diagnostics:** `bash py/diagnose_speak_hooks.sh` (Git Bash on Windows)
 
 ### Repo root env (any adapter)
 
@@ -113,12 +142,14 @@ Hooks and Python resolve the install root via **`AFTERTONE_REPO`** (preferred) o
 
 ### Global install layout
 
-| Path | Purpose |
-|------|---------|
-| `~/aftertone/` | One clone: `py/`, `assets/`, config TOML, daemon |
-| `~/.cursor/hooks.json` | User hooks → `aftertone-speak_summary.sh` |
-| `~/.cursor/hooks/aftertone-install-dir` | Points at `~/aftertone` |
-| `~/.cursor/commands/aftertone-*.md` | Slash commands (any workspace) |
+| Path (Linux / macOS) | Path (Windows) | Purpose |
+|----------------------|----------------|---------|
+| `~/aftertone/` | `%USERPROFILE%\aftertone\` | One clone: `py/`, `assets/`, config TOML, daemon |
+| `~/.cursor/hooks.json` | `%USERPROFILE%\.cursor\hooks.json` | User hooks → speak_summary wrapper |
+| `~/.cursor/hooks/aftertone-install-dir` | `%USERPROFILE%\.cursor\hooks\aftertone-install-dir` | Points at install dir |
+| `~/.cursor/commands/aftertone-*.md` | `%USERPROFILE%\.cursor\commands\aftertone-*.md` | Slash commands (any workspace) |
+
+On **Linux / macOS**, the hook command is `bash ./hooks/aftertone-speak_summary.sh`. On **Windows**, it is `.\hooks\aftertone-speak_summary.cmd` (delegates to Git Bash + `speak_summary.sh`).
 
 ### Copy into another repo (legacy)
 

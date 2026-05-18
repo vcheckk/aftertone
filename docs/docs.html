@@ -52,17 +52,22 @@
     <article class="docs-main">
       <h1 id="getting-started">Getting started</h1>
       <p class="docs-intro">
-        Run <strong>one command</strong> below (needs <strong>git</strong>). It installs <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> if needed, clones to <code>~/aftertone</code>, downloads models, and starts the daemon. Then open that folder in Cursor. Settings: <strong>slash commands</strong> in Agent chat — not hand-edited TOML.
+        Run <strong>one command</strong> for your OS (needs <strong>git</strong>; on Windows, <a href="https://git-scm.com/download/win">Git for Windows</a>). It installs <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> if needed, clones to <code>~/aftertone</code> or <code>%USERPROFILE%\aftertone</code>, downloads models, and can start the daemon. Then open that folder in Cursor. Settings: <strong>slash commands</strong> in Agent chat — not hand-edited TOML.
       </p>
 
       <div class="code-block" style="margin-bottom: 1.25rem;">
-        <div class="code-label">Install</div>
+        <div class="code-label">Linux / macOS</div>
         <pre><code>curl -fsSL https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.sh | bash -s -- --install-uv --start-daemon</code></pre>
+      </div>
+
+      <div class="code-block" style="margin-bottom: 1.25rem;">
+        <div class="code-label">Windows (PowerShell)</div>
+        <pre><code>irm https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.ps1 | iex</code></pre>
       </div>
 
       <h3>Then in Cursor</h3>
       <ul style="color: var(--muted); line-height: 1.75; margin-bottom: 2rem;">
-        <li>Open <code>~/aftertone</code> as the <strong>workspace root</strong>.</li>
+        <li>Open your install folder (<code>~/aftertone</code> or <code>%USERPROFILE%\aftertone</code>) as the <strong>workspace root</strong>.</li>
         <li>Enable <strong>Hooks</strong> and <strong>trust</strong> the workspace.</li>
         <li>Agent chat: <code>/aftertone-status</code>, then <code>/aftertone-on</code>.</li>
         <li>Ask the agent something — listen for one short line after the reply.</li>
