@@ -205,7 +205,7 @@ In Cursor only:
   2. Trust the workspace(s) where you want spoken summaries
   3. Reload Cursor after install (hooks.json / rules load at startup)
   4. Agents must end substantive replies with <spoken_summary>...</spoken_summary> (rule: $env:USERPROFILE\.cursor\rules\spoken-summary.mdc)
-  5. If you use a git clone as the workspace, its .cursor/hooks.json must use .cmd on Windows (bootstrap.ps1 sets this); global hooks alone also work via $cursorHooks
+  5. Do not add .cursor/hooks.json in this repo on Windows — use global hooks only. Repair: scripts/repair-windows-hooks.ps1
 
 Docs: $Root\README.md
 "@

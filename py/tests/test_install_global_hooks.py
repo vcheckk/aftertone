@@ -116,6 +116,7 @@ def test_install_global_windows_cmd(tmp_path: Path, monkeypatch) -> None:
     assert (fake_home / ".cursor/hooks/aftertone-speak_summary.cmd").is_file()
     hooks = json.loads((fake_home / ".cursor/hooks.json").read_text())
     assert any(
-        e.get("command") == r"cmd /c hooks\aftertone-speak_summary.cmd"
+        "aftertone-speak_summary.cmd" in (e.get("command") or "")
+        and "cmd /c" in (e.get("command") or "")
         for e in hooks["hooks"]["afterAgentResponse"]
     )

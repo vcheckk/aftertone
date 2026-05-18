@@ -79,11 +79,16 @@ if ($env:SKIP_WEB -ne "1" -and (Test-Path (Join-Path $Web "package.json"))) {
 }
 
 function Install-WindowsProjectHooks {
+    # Global install uses ~/.cursor/hooks.json only. Project hooks clash with user hooks on Windows.
+    if ($env:AFTERTONE_PROJECT_HOOKS -ne "1") {
+        Write-Host "==> bootstrap: skip project .cursor/hooks.json (global install; set AFTERTONE_PROJECT_HOOKS=1 to override)"
+        return
+    }
     $hooksWin = Join-Path $Root ".cursor\hooks.windows.json"
     $hooksDst = Join-Path $Root ".cursor\hooks.json"
     if (-not (Test-Path $hooksWin)) { return }
     Copy-Item -Path $hooksWin -Destination $hooksDst -Force
-    Write-Host "==> bootstrap: Windows project hooks -> .cursor/hooks.json (.cmd wrappers; bash is not on Cursor PATH)"
+    Write-Host "==> bootstrap: Windows project hooks -> .cursor/hooks.json"
 }
 
 Install-WindowsProjectHooks

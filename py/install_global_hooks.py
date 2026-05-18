@@ -13,11 +13,30 @@ from pathlib import Path
 _AFTER_AGENT = "afterAgentResponse"
 _CMD_UNIX = "bash ./hooks/aftertone-speak_summary.sh"
 # Cursor on Windows does not execute .cmd paths unless wrapped (forum + Colin, Cursor support).
-_CMD_WIN = r"cmd /c hooks\aftertone-speak_summary.cmd"
+_CMD_WIN_REL = r"cmd /c hooks\aftertone-speak_summary.cmd"
 
 
 def _hook_command() -> str:
-    return _CMD_WIN if sys.platform == "win32" else _CMD_UNIX
+    return _CMD_WIN_REL if sys.platform == "win32" else _CMD_UNIX
+
+
+def _windows_hook_command(wrapper_cmd: Path) -> str:
+    """Absolute path + cmd /c — Cursor on Windows often ignores relative .cmd paths."""
+    return f'cmd /c "{wrapper_cmd.resolve()}"'
+
+
+def _apply_windows_commands(merged: dict, wrapper_cmd: Path) -> None:
+    win_cmd = _windows_hook_command(wrapper_cmd)
+    hooks = merged.get("hooks") or {}
+    for entries in hooks.values():
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            cmd = entry.get("command") or ""
+            if "aftertone-speak_summary" in cmd:
+                entry["command"] = win_cmd
 
 
 def _fragment_path(template_dir: Path) -> Path:
@@ -120,6 +139,10 @@ def install_global(*, install_dir: Path, dry_run: bool = False) -> None:
     else:
         merged = fragment
 
+    dest_wrapper_cmd = user_hooks / "aftertone-speak_summary.cmd"
+    if sys.platform == "win32" and dest_wrapper_cmd.is_file():
+        _apply_windows_commands(merged, dest_wrapper_cmd)
+
     user_hooks_json.write_text(json.dumps(merged, indent=2) + "\n", encoding="utf-8")
 
     commands_src = install_dir / ".cursor" / "commands"
@@ -135,14 +158,20 @@ def install_global(*, install_dir: Path, dry_run: bool = False) -> None:
         user_rules.mkdir(parents=True, exist_ok=True)
         shutil.copy2(rule_src, user_rules / "spoken-summary.mdc")
 
-    cmd = _hook_command()
     has_aftertone = any(
-        isinstance(e, dict) and e.get("command") == cmd
+        isinstance(e, dict) and "aftertone-speak_summary" in (e.get("command") or "")
         for e in (merged.get("hooks") or {}).get(_AFTER_AGENT, [])
+    )
+    win_cmd = (
+        _windows_hook_command(dest_wrapper_cmd)
+        if sys.platform == "win32" and dest_wrapper_cmd.is_file()
+        else _hook_command()
     )
     print(f"Global Cursor hooks: {user_hooks_json}")
     print(f"Install root: {install_dir}")
     print(f"afterAgentResponse Aftertone hook: {'yes' if has_aftertone else 'no'}")
+    if sys.platform == "win32" and has_aftertone:
+        print(f"Windows command: {win_cmd}")
 
 
 def main() -> None:
