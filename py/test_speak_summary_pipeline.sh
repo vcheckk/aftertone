@@ -23,7 +23,7 @@ if [[ ! -f "${HOOK_SH}" ]]; then
 fi
 
 MARK="$(date -u +"%Y-%m-%dT%H:%M:%S")"
-HOOK_JSON='{"hook_event_name":"afterAgentResponse","text":"Pipeline test reply. It includes \"quotes\" and enough letters to pass min_chars.","generation_id":"pipeline-test","conversation_id":"c-pipeline"}'
+HOOK_JSON='{"hook_event_name":"afterAgentResponse","text":"Pipeline test reply. <spoken_summary>Pipeline test: hook and daemon are working!!</spoken_summary>","generation_id":"pipeline-test","conversation_id":"c-pipeline"}'
 
 export AFTERTONE_REPO="${REPO}"
 export SUPERTONIC_REPO="${REPO}"
