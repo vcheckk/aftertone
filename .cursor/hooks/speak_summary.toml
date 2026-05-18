@@ -37,7 +37,7 @@ lang = "en"
 # Playback speed: 1.0 is baseline; higher speaks faster (same meaning as CLI examples).
 speed = 1.0
 # ONNX denoising steps (quality vs CPU). Upstream examples often use 8; 4 is faster but rougher.
-total_step = 4
+total_step = 8
 
 # Empty = always speak. Set e.g. "22:00-08:00" for overnight quiet (local clock).
 quiet_hours = ""
@@ -61,11 +61,11 @@ heuristic_code_fence_fraction = 0.35
 heuristic_max_sentences_code_heavy = 1
 
 # v2 summary routing: auto | tag_only | heuristic
-# auto = use <spoken_summary> when present, else extract a short line (default)
-summary_mode = "auto"
+# tag_only = only <spoken_summary> is spoken (default)
+summary_mode = "tag_only"
 
 # Legacy alias: true forces tag_only when summary_mode is unset
-only_speak_spoken_summary = false
+only_speak_spoken_summary = true
 
 # Supertonic 3 inline expression tags (state= on spoken_summary): off | subtle | expressive | passthrough
 # Repo default off — agents use per-sentence !! ?? ?! !? in the tag (see spoken-summary rule). No daemon restart.

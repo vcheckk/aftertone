@@ -17,9 +17,10 @@ from aftertone.summary import build_speakable_text
 from aftertone.text_utils import heuristic_spoken
 
 
-def test_summary_mode_auto_default():
-    assert summary_mode({}) == "auto"
-    assert summary_mode({"only_speak_spoken_summary": True}) == "tag_only"
+def test_summary_mode_tag_only_default():
+    assert summary_mode({}) == "tag_only"
+    assert summary_mode({"only_speak_spoken_summary": False}) == "tag_only"
+    assert summary_mode({"summary_mode": "auto"}) == "auto"
     assert summary_mode({"summary_mode": "heuristic"}) == "heuristic"
 
 

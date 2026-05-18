@@ -1,13 +1,13 @@
 ---
 name: aftertone-speed
-description: Pick Aftertone TTS playback speed
+description: Set Aftertone TTS playback speed
 ---
 
-## Speed rule (required)
+## Agent rule
 
-**Do not** plan or run shell first (unless the user gave a number, e.g. `/aftertone-speed 1.1`).
+**No planning.** Do not explain or run shell first unless the user gave a number (e.g. `/aftertone-speed 1.1`).
 
-Your **first** tool call must be **AskQuestion** with:
+If no value was given, your **first** tool call must be **AskQuestion** (`allow_multiple: false`):
 
 | id | label |
 |----|-------|
@@ -18,11 +18,12 @@ Your **first** tool call must be **AskQuestion** with:
 | 1.2 | Faster (1.2) |
 | 1.5 | Fast (1.5) |
 
-## Apply
+## Apply (one command only)
 
-```bash
-AFTERTONE_ROOT="$(bash "${HOME}/.cursor/hooks/aftertone-root.sh")"
-uv run --directory "${AFTERTONE_ROOT}/py" python speak_summary_config.py set speed VALUE
+`cd` to the install root (first line of `~/.cursor/hooks/aftertone-install-dir`), then run **only**:
+
+```
+uv run --directory py python -m aftertone set speed VALUE
 ```
 
-Allowed range **0.5–2.0** (recommended **0.9–1.5**). No daemon restart. Report stdout only.
+Allowed range **0.5–2.0**. No daemon restart. Report stdout only.

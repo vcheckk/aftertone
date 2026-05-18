@@ -6,7 +6,7 @@
 - **`.cursor/hooks.json`** — Cursor adapter; must include `"version": 1`.
 - **`.cursor/hooks/`** — `speak_summary.sh`, `speak_summary.toml`, `README.md` (full TOML reference), `hook_payload_trace.sh`.
 - **`py/`** — `tts_daemon.py`, `tts_daemon_ctl.py`, `speak_summary_prepare.py`, `speak_summary_toggle.py` (flip `enabled` in TOML), `speak_summary_config.py` (lang/speed/mode/voice), vendored `helper.py` (Supertonic), `tts_io.py`, `fetch_assets.py`, diagnostics.
-- **`.cursor/commands/`** — **only user-facing way** to change spoken-TTS settings (`/aftertone-toggle`, `/aftertone-lang`, …). Agent runs `speak_summary_toggle.py` / `speak_summary_config.py`; do not hand-edit TOML or suggest VS Code tasks for config.
+- **`.cursor/commands/`** — **only user-facing way** to change spoken-TTS settings (`/aftertone-toggle`, `/aftertone-lang`, …). Each command is **one** `uv run --directory py python -m aftertone …` from the install root (`aftertone-install-dir`); agent must **not** plan or hand-edit TOML. Settings go through `aftertone set lang|speed|mode|voice|expression` (delegates to `speak_summary_config.py`); voice restarts the daemon by default.
 - **`scripts/bootstrap.sh`** — `uv sync` + HF snapshot if ONNX dir missing.
 
 ## Commands
@@ -14,7 +14,7 @@
 - One-line install: `curl -fsSL .../install.sh | bash -s -- --install-uv --start-daemon` → **`~/aftertone`** + **user hooks** in `~/.cursor/hooks.json` (default `--global`). Legacy per-project: `--no-global --into .`. See `scripts/install.sh`.
 - Bootstrap: `bash scripts/bootstrap.sh` from repo root.
 - Daemon: `cd py && uv run python tts_daemon_ctl.py start --repo-root ..`
-- **User config:** slash `/aftertone-*` only ([`.cursor/commands/`](.cursor/commands/)). When the user wants to change TTS settings, run the matching command’s scripts — do not tell them to edit TOML or use terminal CLIs directly. **lang/speed/mode/voice** without a value: **AskQuestion** first (see each command file); **voice** uses `set voice … --restart --ensure`. Open the **repo root** as the workspace so commands load (opening only `py/` still works for hooks via [py/.cursor/hooks.json](py/.cursor/hooks.json) if present).
+- **User config:** slash `/aftertone-*` only ([`.cursor/commands/`](.cursor/commands/)). Agent runs **one** `python -m aftertone …` from the install root — no planning preamble, no bash `aftertone-root.sh`, no hand-edited TOML. **lang/speed/mode/voice** without a value: **AskQuestion** first; **voice** uses `aftertone set voice PRESET --ensure` (daemon restart is default).
 - Tests: `cd py && uv sync && uv run pytest` — `py/tests/` (integration tests run `speak_summary_prepare.py` with temp TOML; unit tests cover helpers including quiet hours).
 - `uv run` examples: `cd py` first, or `uv run --directory py …` from repo root.
 
@@ -46,7 +46,7 @@
 ## Learned User Preferences
 
 - **Spoken summaries** should sound like a **hybrid pair-programmer briefing** for vibe coding: lead with **state** (what happened), add **significance** when it changes what to think, add a **next move** only for blockers, risk, tests, decisions, or clear actions — calm, direct tone; no file paths or filler in `<spoken_summary>`. For **livelier Supertonic delivery**, end **each sentence** inside the tag with `!!`, `??`, `?!`, or `!?` (vary them); do **not** use `state="..."` on the tag — inline expression tags were too subtle to hear.
-- For **`/aftertone-lang`**, **`/aftertone-speed`**, **`/aftertone-mode`**, and **`/aftertone-voice`** without a value in the message, the **first** tool call must be **AskQuestion** (picker immediately — no planning preamble or shell before the picker).
+- For **`/aftertone-lang`**, **`/aftertone-speed`**, **`/aftertone-mode`**, and **`/aftertone-voice`** without a value in the message, the **first** tool call must be **AskQuestion** (picker only — no planning or shell before the picker); then **one** `aftertone set …` command.
 - Voice pickers and status should show **human names with gender**, e.g. `Sara (female)` / `James (male)` (`py/voice_presets.py`); TOML still uses `M1`/`F4` ids.
 - Public README and site adapter tables should list only **Cursor, Claude Code, Codex, and OpenCode** (not other agent brands).
 - **Do not propose or integrate Microsoft VibeVoice**; user evaluated it locally and declined (heavy runtime vs staying on Supertonic ONNX).
@@ -57,5 +57,5 @@
 - **`py/` and `assets/` belong at the install/repo root**, not under `.cursor/` — `.cursor/` is the Cursor adapter (hooks, commands, rules, local state); the Python runtime and ONNX weights are shared across adapters.
 - Canonical first-time install: `curl -fsSL https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.sh | bash -s -- --install-uv --start-daemon` (global hooks + `~/aftertone` by default).
 - **`/aftertone-restart`** restarts the TTS daemon when **port**, **voice_***, **onnx_dir**, or **use_gpu** change; **lang**, **speed**, **enabled**, and **expression_mode** apply on the next hook without restart.
-- **v2 (2.0):** `py/aftertone/` package, `summary_mode = "auto"` default (speak without model tags), cross-platform CLI: `uv run --directory py python -m aftertone {on|off|status|repair|doctor|speak}`. Slash commands use the CLI, not bash `aftertone-root.sh` chains.
-- Repo **`speak_summary.toml` defaults:** `summary_mode = "auto"`, `only_speak_spoken_summary = false`, `total_step = 8`, `expression_mode = "off"`.
+- **v2 (2.0):** `py/aftertone/` package, cross-platform CLI: `uv run --directory py python -m aftertone {on|off|status|repair|doctor|speak}`. Slash commands use the CLI, not bash `aftertone-root.sh` chains.
+- Repo **`speak_summary.toml` defaults:** `summary_mode = "tag_only"`, `only_speak_spoken_summary = true`, `total_step = 8`, `expression_mode = "off"`. Set `summary_mode = "auto"` for heuristic fallback when the model omits the tag.

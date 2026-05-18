@@ -3,10 +3,12 @@ name: aftertone-on
 description: Turn Aftertone spoken summary TTS on
 ---
 
-Run **only** this from the **Aftertone install root** (`~/aftertone` or `%USERPROFILE%\aftertone`):
+## Agent rule
+
+**No planning.** Run **only** the command below. Report stdout. No other edits.
+
+`cd` to the install root (first line of `~/.cursor/hooks/aftertone-install-dir`), then:
 
 ```
 uv run --directory py python -m aftertone on
 ```
-
-Report stdout (`on`). No other edits.

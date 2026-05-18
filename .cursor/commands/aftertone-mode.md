@@ -1,24 +1,25 @@
 ---
 name: aftertone-mode
-description: Pick Aftertone TTS queue mode (queue or interrupt)
+description: Set Aftertone TTS queue mode (queue or interrupt)
 ---
 
-## Speed rule (required)
+## Agent rule
 
-**Do not** plan or run shell first (unless the user said `queue` or `interrupt`).
+**No planning.** Do not explain or run shell first unless the user said `queue` or `interrupt`.
 
-Your **first** tool call must be **AskQuestion**:
+If no mode was given, your **first** tool call must be **AskQuestion** (`allow_multiple: false`):
 
 | id | label |
 |----|-------|
 | queue | queue — wait for current speech |
 | interrupt | interrupt — stop and speak new line |
 
-## Apply
+## Apply (one command only)
 
-```bash
-AFTERTONE_ROOT="$(bash "${HOME}/.cursor/hooks/aftertone-root.sh")"
-uv run --directory "${AFTERTONE_ROOT}/py" python speak_summary_config.py set mode MODE
+`cd` to the install root (first line of `~/.cursor/hooks/aftertone-install-dir`), then run **only**:
+
+```
+uv run --directory py python -m aftertone set mode MODE
 ```
 
 No daemon restart. Report stdout only.

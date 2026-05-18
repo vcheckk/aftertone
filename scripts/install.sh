@@ -150,12 +150,15 @@ start_daemon() {
 
 enable_spoken_tts() {
   local root="$1"
-  echo "==> install: enabling spoken TTS (v2 auto summary mode)…"
+  echo "==> install: enabling spoken TTS (tag_only + total_step 8)…"
   (cd "${root}/py" && uv run python -m aftertone on) || {
     echo "install: could not enable TTS (use /aftertone-on in Cursor)" >&2
     return 1
   }
-  (cd "${root}/py" && uv run python -m aftertone repair) || true
+  (cd "${root}/py" && uv run python -m aftertone apply-defaults) || {
+    echo "install: could not apply speak_summary.toml defaults" >&2
+    return 1
+  }
 }
 
 sync_spoken_summary_rule() {
@@ -254,6 +257,8 @@ main() {
 
   if [[ "${GLOBAL_HOOKS}" == "1" ]]; then
     install_global_hooks "${INSTALL_DIR}" || true
+    enable_spoken_tts "${INSTALL_DIR}" || true
+    sync_spoken_summary_rule "${INSTALL_DIR}" || true
   fi
 
   if [[ -n "${INTO}" ]]; then
@@ -261,8 +266,6 @@ main() {
   fi
 
   if [[ "${START_DAEMON}" == "1" ]]; then
-    enable_spoken_tts "${INSTALL_DIR}" || true
-    sync_spoken_summary_rule "${INSTALL_DIR}" || true
     start_daemon "${INSTALL_DIR}" || true
   fi
 

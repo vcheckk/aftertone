@@ -1,17 +1,13 @@
 ---
 name: aftertone-voice
-description: Pick an Aftertone voice preset, apply it, and restart the TTS daemon
+description: Set Aftertone voice preset, update TOML, restart daemon
 ---
 
-## Speed rule (required)
+## Agent rule
 
-**Do not** plan, explain, or run shell before the user picks a voice.
+**No planning.** Do not explain or run shell first unless the user named a preset (e.g. `/aftertone-voice F4`, `Sara`).
 
-Your **first** tool call must be **AskQuestion** (unless the user already named a preset or person, e.g. `/aftertone-voice F4`, `/aftertone-voice Sara`, `James`).
-
-## Picker (first tool call)
-
-One question, `allow_multiple: false`. Use these options (`id` = TOML preset, `label` = human name):
+If no preset was given, your **first** tool call must be **AskQuestion** (`allow_multiple: false`):
 
 | id | label |
 |----|-------|
@@ -26,19 +22,12 @@ One question, `allow_multiple: false`. Use these options (`id` = TOML preset, `l
 | M4 | Noah (male) |
 | M5 | Owen (male) |
 
-Prompt example: `Choose a voice (daemon restarts after apply).`
+## Apply (one command only)
 
-(Optional check: run `voice-picker` under the global install — see `aftertone-status`.)
+`cd` to the install root (first line of `~/.cursor/hooks/aftertone-install-dir`), then run **only**:
 
-## Apply (only after the user picks)
-
-`PRESET` = chosen **id** (e.g. `F4`), not the display name:
-
-```bash
-AFTERTONE_ROOT="$(bash "${HOME}/.cursor/hooks/aftertone-root.sh")"
-uv run --directory "${AFTERTONE_ROOT}/py" python speak_summary_config.py set voice PRESET --restart --ensure
+```
+uv run --directory py python -m aftertone set voice PRESET --ensure
 ```
 
-You may also pass a first name (e.g. `Sara`) — the script resolves it to the preset id.
-
-Report stdout briefly. Do not hand-edit TOML.
+Use the chosen **id** (e.g. `F4`), not the display name. The CLI updates TOML and **restarts the daemon** by default. Report stdout only.

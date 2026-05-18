@@ -17,10 +17,10 @@
 From install root (`~/aftertone` or `%USERPROFILE%\aftertone`):
 
 ```bash
-uv run --directory py python -m aftertone on|off|toggle|status|restart|repair|doctor|speak "hello"
+uv run --directory py python -m aftertone on|off|toggle|status|restart|repair|apply-defaults|doctor|speak "hello"
 ```
 
-- **`summary_mode = "auto"`** (default): speak explicit `<spoken_summary>` or auto-extract a short line.
+- **`summary_mode = "tag_only"`** (default): only `<spoken_summary>` is spoken. Use **`auto`** for fallback extraction when the tag is missing.
 - Optional MCP template: [`cursor-global/mcp.aftertone.json`](cursor-global/mcp.aftertone.json) — control only, not the speech trigger.
 
 Hook replay: `bash py/diagnose_speak_hooks.sh [hook.json]`

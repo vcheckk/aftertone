@@ -45,6 +45,6 @@ def summary_mode(cfg: dict) -> SummaryMode:
     raw = str(cfg.get("summary_mode", "")).strip().lower()
     if raw in ("auto", "tag_only", "heuristic"):
         return raw  # type: ignore[return-value]
-    if cfg_bool(cfg, "only_speak_spoken_summary", False):
+    if cfg_bool(cfg, "only_speak_spoken_summary", True):
         return "tag_only"
-    return "auto"
+    return "tag_only"

@@ -1,12 +1,14 @@
 ---
 name: aftertone-doctor
-description: Diagnose Aftertone hooks, config, and daemon
+description: Run Aftertone diagnostics
 ---
 
-Run **only** this from the **Aftertone install root**:
+## Agent rule
+
+**No planning.** Run **only** the command below. Summarize the report briefly. No other edits unless doctor says repair is needed.
+
+`cd` to the install root (first line of `~/.cursor/hooks/aftertone-install-dir`), then:
 
 ```
 uv run --directory py python -m aftertone doctor
 ```
-
-Summarize `checks_ok` and `issues` from the JSON. No other edits.

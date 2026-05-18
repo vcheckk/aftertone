@@ -1,31 +1,27 @@
 ---
 name: aftertone-expression
-description: Set Aftertone spoken-summary expression mode (Supertonic tags)
+description: Set Aftertone expression_mode in TOML
 ---
 
-## Expression rule (required)
+## Agent rule
 
-**Do not** plan or run shell first (unless the user gave a mode, e.g. `/aftertone-expression subtle`).
+**No planning.** Do not explain or run shell first unless the user gave a mode (e.g. `/aftertone-expression subtle`).
 
-Your **first** tool call must be **AskQuestion** with options from:
+If no mode was given, your **first** tool call must be **AskQuestion** (`allow_multiple: false`):
 
-```bash
-AFTERTONE_ROOT="$(bash "${HOME}/.cursor/hooks/aftertone-root.sh" 2>/dev/null || echo "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")"
-uv run --directory "${AFTERTONE_ROOT}/py" python speak_summary_config.py expression-picker
+| id | label |
+|----|-------|
+| off | Off — plain speech only |
+| subtle | Subtle — sigh on blocked |
+| expressive | Expressive — sigh and breath on more states |
+| passthrough | Passthrough — keep one inline tag you write |
+
+## Apply (one command only)
+
+`cd` to the install root (first line of `~/.cursor/hooks/aftertone-install-dir`), then run **only**:
+
 ```
-
-| id | meaning |
-|----|---------|
-| off | Plain speech; no expression tags |
-| subtle | Sigh prefix when the agent sets `state="blocked"` on `<spoken_summary>` |
-| expressive | Subtle plus breath on `state="debugging"` |
-| passthrough | Keep one inline tag you write in the summary (advanced) |
-
-## Apply
-
-```bash
-AFTERTONE_ROOT="$(bash "${HOME}/.cursor/hooks/aftertone-root.sh" 2>/dev/null || echo "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")"
-uv run --directory "${AFTERTONE_ROOT}/py" python speak_summary_config.py set expression MODE
+uv run --directory py python -m aftertone set expression MODE
 ```
 
 No daemon restart. Report stdout only.

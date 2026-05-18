@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import subprocess
 import sys
 import urllib.error
@@ -13,6 +12,7 @@ import urllib.request
 from pathlib import Path
 
 from aftertone.config import cfg_enabled, load_config, summary_mode
+from aftertone.defaults import apply_install_defaults
 from aftertone.doctor import run_doctor
 from aftertone.paths import config_path, install_root, state_dir
 
@@ -98,33 +98,14 @@ def cmd_repair(args: argparse.Namespace) -> int:
     if rc != 0:
         return rc
     _invoke(repo, "speak_summary_toggle.py", "on")
-    _set_summary_mode_auto(config_path(repo))
+    apply_install_defaults(config_path(repo))
     _invoke(repo, "sync_spoken_rule_lang.py")
     return cmd_restart(args)
 
 
-def _set_summary_mode_auto(toml_path: Path) -> None:
-    if not toml_path.is_file():
-        return
-    text = toml_path.read_text(encoding="utf-8")
-    if re.search(r"^\s*summary_mode\s*=", text, re.MULTILINE):
-        text = re.sub(
-            r"^(\s*)summary_mode\s*=\s*\S+.*$",
-            r'\1summary_mode = "auto"',
-            text,
-            count=1,
-            flags=re.MULTILINE,
-        )
-    else:
-        text = text.rstrip() + '\n\n# v2 default: tag when present, else auto-extract\nsummary_mode = "auto"\n'
-    text = re.sub(
-        r"^(\s*)only_speak_spoken_summary\s*=\s*true\s*$",
-        r"\1only_speak_spoken_summary = false",
-        text,
-        count=1,
-        flags=re.MULTILINE | re.IGNORECASE,
-    )
-    toml_path.write_text(text, encoding="utf-8")
+def cmd_apply_defaults(args: argparse.Namespace) -> int:
+    apply_install_defaults(config_path(_repo(args.repo_root)))
+    return 0
 
 
 def cmd_speak(args: argparse.Namespace) -> int:
@@ -180,6 +161,36 @@ def cmd_prepare(args: argparse.Namespace) -> int:
     return 0
 
 
+def _config(repo: Path, *args: str) -> int:
+    """Delegate to speak_summary_config.py (TOML edits; optional daemon restart)."""
+    return _invoke(repo, "speak_summary_config.py", *args)
+
+
+def cmd_set_lang(args: argparse.Namespace) -> int:
+    return _config(_repo(args.repo_root), "set", "lang", args.code)
+
+
+def cmd_set_speed(args: argparse.Namespace) -> int:
+    return _config(_repo(args.repo_root), "set", "speed", args.value)
+
+
+def cmd_set_mode(args: argparse.Namespace) -> int:
+    return _config(_repo(args.repo_root), "set", "mode", args.mode)
+
+
+def cmd_set_expression(args: argparse.Namespace) -> int:
+    return _config(_repo(args.repo_root), "set", "expression", args.mode)
+
+
+def cmd_set_voice(args: argparse.Namespace) -> int:
+    extra: list[str] = []
+    if args.restart:
+        extra.append("--restart")
+    if args.ensure:
+        extra.append("--ensure")
+    return _config(_repo(args.repo_root), "set", "voice", args.preset, *extra)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="aftertone", description="Aftertone v2 CLI")
     parser.add_argument("--repo-root", type=Path, default=None, help="Install root")
@@ -191,7 +202,8 @@ def main(argv: list[str] | None = None) -> int:
         ("toggle", cmd_toggle, "Toggle spoken TTS"),
         ("status", cmd_status, "Show config and daemon status"),
         ("restart", cmd_restart, "Restart TTS daemon"),
-        ("repair", cmd_repair, "Re-register hooks and set v2 defaults"),
+        ("repair", cmd_repair, "Re-register hooks and set install defaults"),
+        ("apply-defaults", cmd_apply_defaults, "Set tag_only + total_step 8 in speak_summary.toml"),
         ("doctor", cmd_doctor, "Diagnostics"),
     ):
         p = sub.add_parser(name, help=help_text)
@@ -204,6 +216,44 @@ def main(argv: list[str] | None = None) -> int:
     pp = sub.add_parser("prepare", help="Prepare payload from hook JSON file")
     pp.add_argument("hook_json", help="Path to hook JSON")
     pp.set_defaults(func=cmd_prepare)
+
+    pset = sub.add_parser("set", help="Update speak_summary.toml (no agent-side TOML edits)")
+    set_sub = pset.add_subparsers(dest="setting", required=True)
+
+    pl = set_sub.add_parser("lang", help="Set lang and sync spoken-summary rule")
+    pl.add_argument("code", help="Language code (e.g. en, fr)")
+    pl.set_defaults(func=cmd_set_lang)
+
+    ps = set_sub.add_parser("speed", help="Set playback speed (no daemon restart)")
+    ps.add_argument("value", help="Float 0.5–2.0")
+    ps.set_defaults(func=cmd_set_speed)
+
+    pm = set_sub.add_parser("mode", help="Set queue or interrupt (no daemon restart)")
+    pm.add_argument("mode", choices=("queue", "interrupt"))
+    pm.set_defaults(func=cmd_set_mode)
+
+    pe = set_sub.add_parser("expression", help="Set expression_mode (no daemon restart)")
+    pe.add_argument("mode", help="off, subtle, expressive, or passthrough")
+    pe.set_defaults(func=cmd_set_expression)
+
+    pv = set_sub.add_parser("voice", help="Set voice preset (restarts daemon by default)")
+    pv.add_argument("preset", help="Preset id (F4, M1) or display name (Sara)")
+    pv.add_argument(
+        "--no-restart",
+        action="store_true",
+        help="Skip daemon restart (not recommended)",
+    )
+    pv.add_argument(
+        "--ensure",
+        action="store_true",
+        help="Bootstrap voice assets if missing",
+    )
+
+    def cmd_set_voice_cli(ns: argparse.Namespace) -> int:
+        ns.restart = not ns.no_restart
+        return cmd_set_voice(ns)
+
+    pv.set_defaults(func=cmd_set_voice_cli)
 
     args = parser.parse_args(argv)
     try:
