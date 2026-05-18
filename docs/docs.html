@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Aftertone documentation: install, Cursor hooks, daemon control, configuration, troubleshooting, and spoken summaries." />
+  <meta name="description" content="Aftertone docs: free local TTS — no API keys or subscription. One install command, Cursor hooks, daemon control, and troubleshooting." />
   <link rel="canonical" href="https://omarelkhal.github.io/aftertone/docs.html" />
   <meta name="theme-color" content="#c96f2e" />
   <title>Docs — Aftertone</title>
@@ -23,6 +23,7 @@
         <a href="index.html">Home</a>
         <a class="is-active" href="docs.html">Docs</a>
         <a href="https://github.com/omarelkhal/aftertone">GitHub</a>
+        <a href="#free-to-use">Free</a>
         <a class="nav-cta" href="#getting-started">Install</a>
       </nav>
     </div>
@@ -31,7 +32,7 @@
   <div class="page-hero">
     <div class="wrap">
       <h1>Documentation</h1>
-      <p>One install command, then open Aftertone in Cursor. Slash commands, daemon control, and troubleshooting below.</p>
+      <p><strong>Free</strong> local speech after each reply — <strong>no API keys</strong>, <strong>no Aftertone subscription</strong>. One install command, then enable Hooks in Cursor.</p>
     </div>
   </div>
 
@@ -39,6 +40,7 @@
     <aside class="docs-sidebar" aria-label="On this page">
       <nav>
         <a href="#getting-started">Getting started</a>
+        <a href="#free-to-use">Free to use</a>
         <a href="#slash-commands">Slash commands</a>
         <a href="#cursor">Cursor setup</a>
         <a href="#cli">Aftertone CLI</a>
@@ -56,6 +58,12 @@
       <p class="docs-intro">
         Run <strong>one command</strong> for your OS (needs <strong>git</strong>; on Windows, <a href="https://git-scm.com/download/win">Git for Windows</a>). It installs <strong>uv</strong>, Python, ONNX models, Cursor hooks, the daemon, and enables spoken TTS under <code>~/aftertone</code> or <code>%USERPROFILE%\aftertone</code>. In Cursor you only turn on <strong>Hooks</strong> and <strong>trust</strong> the workspace.
       </p>
+      <ul class="value-props" style="margin-bottom: 2rem;" aria-label="Cost and requirements for Aftertone TTS">
+        <li><strong>Nothing to pay</strong> for Aftertone speech — open source, no subscription</li>
+        <li><strong>No API keys</strong> — localhost daemon only; no cloud TTS signup</li>
+        <li><strong>No Hugging Face token</strong> required for default model download (public weights)</li>
+        <li>Your <strong>coding agent</strong> may still need its own plan — separate from Aftertone</li>
+      </ul>
 
       <div class="code-block" style="margin-bottom: 1.25rem;">
         <div class="code-label">Linux / macOS</div>
@@ -66,6 +74,40 @@
         <div class="code-label">Windows (PowerShell)</div>
         <pre><code>irm https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.ps1 | iex</code></pre>
       </div>
+
+      <h2 id="free-to-use">Free to use — nothing to pay for speech</h2>
+      <p style="color: var(--muted); line-height: 1.65; margin-bottom: 1rem;">
+        Aftertone is the <strong>local TTS layer</strong> only. It does not replace your coding agent and does not require its own paid plan.
+      </p>
+      <div class="free-table-wrap" style="margin-bottom: 1.5rem;">
+        <table class="free-table" aria-label="Aftertone pricing and requirements">
+          <tbody>
+            <tr>
+              <th scope="row">Cost</th>
+              <td><strong>$0</strong> — open source (MIT). No paid tier for speech.</td>
+            </tr>
+            <tr>
+              <th scope="row">API keys</th>
+              <td><strong>None</strong> — <code>tts_daemon</code> on localhost; no cloud TTS account.</td>
+            </tr>
+            <tr>
+              <th scope="row">Subscription</th>
+              <td><strong>None</strong> for Aftertone — install once under <code>~/aftertone</code> or <code>%USERPROFILE%\aftertone</code>.</td>
+            </tr>
+            <tr>
+              <th scope="row">Models</th>
+              <td>Public Hugging Face weights — <strong>no HF token</strong> required for the default download.</td>
+            </tr>
+            <tr>
+              <th scope="row">Languages</th>
+              <td><code>/aftertone-lang</code> — write <code>&lt;spoken_summary&gt;</code> in that language (no auto-translation).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="free-note" style="margin-bottom: 2rem;">
+        Your <strong>coding agent</strong> (Cursor, Claude, etc.) may still need its own subscription — separate from Aftertone.
+      </p>
 
       <h3>Then in Cursor</h3>
       <ul style="color: var(--muted); line-height: 1.75; margin-bottom: 2rem;">

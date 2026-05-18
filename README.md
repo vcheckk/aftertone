@@ -6,6 +6,18 @@
 
 **Hear a short spoken line after your coding agent answers** — on-device **[Supertonic](https://github.com/supertone-inc/supertonic) ONNX** through a tiny **local HTTP daemon** (models stay loaded; hooks stay fast).
 
+### Free to use — nothing to pay for speech
+
+| | Aftertone (this repo) |
+|---|---|
+| **Cost** | **$0** — open source (MIT). No paid tier for TTS. |
+| **API keys** | **None** — synthesis runs on **localhost** only; your reply text never goes to a cloud TTS API. |
+| **Subscription** | **None** for Aftertone — install once, use in every project. |
+| **Setup** | **One install command** (below) — downloads free ONNX weights from Hugging Face; no account required for the models. |
+| **Languages** | **Many locales** supported by Supertonic — set voice/language with `/aftertone-lang`; write `<spoken_summary>` in that language (the hook does not auto-translate). |
+
+> **Note:** Your **coding agent** (Cursor, Claude, etc.) may have its own plan or API keys — that is separate from Aftertone, which only adds **local** speech after each reply.
+
 One daemon, thin adapters per tool — **Cursor ships today**; **Claude Code**, **Codex**, and **OpenCode** are on the roadmap. Want to help? See [CONTRIBUTING.md](CONTRIBUTING.md) and the **Adapter research** issue template.
 
 <p align="center">
@@ -52,7 +64,7 @@ One daemon, thin adapters per tool — **Cursor ships today**; **Claude Code**, 
 
 ## Discovery
 
-If you are searching for **local text-to-speech**, **on-device** assistants, **AI coding agent** tooling, **agentic coding** workflows, or **Cursor IDE** **hooks** that do not send your thread to a cloud API — Aftertone is a small **open source** **developer tool**: **ONNX Runtime** + **Supertonic** for optional **voice** feedback after the model answers, **offline**-friendly and **privacy**-minded.
+If you are searching for **free local text-to-speech**, **no API key** TTS, **on-device** assistants, **AI coding agent** tooling, **agentic coding** workflows, or **Cursor IDE** **hooks** that do not send your thread to a cloud API — Aftertone is a small **open source** **developer tool**: **ONNX Runtime** + **Supertonic** for optional **voice** feedback after the model answers, **offline**-friendly and **privacy**-minded. **Install once** — no Aftertone subscription.
 
 **Related GitHub topics:** [ai-agents](https://github.com/topics/ai-agents) · [coding-agent](https://github.com/topics/coding-agent) · [cursor](https://github.com/topics/cursor) · [text-to-speech](https://github.com/topics/text-to-speech) · [onnx](https://github.com/topics/onnx) · [local-first](https://github.com/topics/local-first) · [developer-tools](https://github.com/topics/developer-tools) · [open-source](https://github.com/topics/open-source)
 

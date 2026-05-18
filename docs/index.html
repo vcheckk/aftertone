@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Aftertone speaks a short local line after your AI coding agent replies. Cursor hooks, on-device Supertonic ONNX, private and fast." />
+  <meta name="description" content="Free local TTS after your coding agent replies. No API keys, no subscription, no cloud TTS — one install command. Cursor hooks and Supertonic ONNX on your machine." />
   <link rel="canonical" href="https://omarelkhal.github.io/aftertone/" />
   <meta name="theme-color" content="#c96f2e" />
-  <title>Aftertone — local voice after your coding agent answers</title>
+  <title>Aftertone — free local voice after your coding agent answers</title>
   <meta property="og:title" content="Aftertone — hear your agent after it answers" />
-  <meta property="og:description" content="Local text-to-speech for coding agents. Cursor hooks, Supertonic ONNX on your machine. Open source." />
+  <meta property="og:description" content="Free local TTS for coding agents. No API keys or subscription — install once and hear short summaries. Cursor hooks, Supertonic ONNX on your machine." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://omarelkhal.github.io/aftertone/" />
   <meta property="og:image" content="https://raw.githubusercontent.com/omarelkhal/aftertone/main/img/aftertone-logo.png" />
@@ -18,7 +18,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"SoftwareApplication","name":"Aftertone","applicationCategory":"DeveloperApplication","operatingSystem":"Linux, macOS, Windows","description":"Optional local text-to-speech after AI coding agents finish a reply. Cursor hooks and a localhost ONNX daemon.","url":"https://omarelkhal.github.io/aftertone/","codeRepository":"https://github.com/omarelkhal/aftertone","license":"https://github.com/omarelkhal/aftertone/blob/main/LICENSE","isAccessibleForFree":true}
+  {"@context":"https://schema.org","@type":"SoftwareApplication","name":"Aftertone","applicationCategory":"DeveloperApplication","operatingSystem":"Linux, macOS, Windows","description":"Free local text-to-speech after AI coding agents finish a reply. No API keys or subscription; one install command. Cursor hooks and a localhost ONNX daemon.","url":"https://omarelkhal.github.io/aftertone/","codeRepository":"https://github.com/omarelkhal/aftertone","license":"https://github.com/omarelkhal/aftertone/blob/main/LICENSE","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
   </script>
 </head>
 <body>
@@ -32,6 +32,7 @@
         <a class="is-active" href="index.html">Home</a>
         <a href="docs.html">Docs</a>
         <a href="https://github.com/omarelkhal/aftertone">GitHub</a>
+        <a href="#free">Free</a>
         <a class="nav-cta" href="#install">Install</a>
       </nav>
     </div>
@@ -48,12 +49,20 @@
         loading="eager"
         onerror="this.style.display='none'"
       />
-      <p class="hero-badge">Local · ONNX · Open source</p>
+      <p class="hero-badge">Free · No API keys · Local · Open source</p>
       <h1>Hear a short line when your agent finishes</h1>
       <p class="lead">
         <strong>Aftertone</strong> plays a brief spoken summary after each reply — on your machine, through a tiny
-        <strong>localhost daemon</strong> and <strong>Supertonic</strong> models. No cloud text-to-speech API.
+        <strong>localhost daemon</strong> and <strong>Supertonic</strong> models. <strong>Nothing to pay</strong> for speech:
+        no cloud TTS API, no Aftertone subscription, no API keys to configure.
       </p>
+      <ul class="value-props" aria-label="Why Aftertone is free to run">
+        <li><strong>$0</strong> — open source; optional donations only, not a paywall</li>
+        <li><strong>No API keys</strong> — audio is synthesized on localhost only</li>
+        <li><strong>No subscription</strong> for Aftertone — one install, every project</li>
+        <li><strong>One command</strong> — uv, models, hooks, and daemon; then enable Hooks in Cursor</li>
+        <li><strong>Many languages</strong> — pick with <code>/aftertone-lang</code>; write the spoken tag in that language</li>
+      </ul>
 
       <div class="hero-install" id="install">
         <div class="code-block">
@@ -65,6 +74,7 @@
           <pre><code>irm https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.ps1 | iex</code></pre>
         </div>
         <p class="hero-install-note">
+          <strong>Free install</strong> — no API keys, no Aftertone subscription, no cloud TTS account.
           One command installs uv, models, hooks, and the daemon to <code>~/aftertone</code> or <code>%USERPROFILE%\aftertone</code>.
           In Cursor: enable Hooks and trust your workspace — spoken TTS is already on in config.
         </p>
@@ -105,6 +115,45 @@
       </div>
     </div>
 
+    <section class="free-section" id="free">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="pill">$0 forever for speech</span>
+          <h2>Install once. Nothing to pay for TTS.</h2>
+          <p>Aftertone is the <strong>local spoken layer</strong> after your agent replies — not another SaaS bill.</p>
+        </div>
+        <div class="free-table-wrap">
+          <table class="free-table" aria-label="Aftertone cost and requirements">
+            <tbody>
+              <tr>
+                <th scope="row">Cost</th>
+                <td><strong>$0</strong> — open source (MIT). Optional donations only; no paid tier for speech.</td>
+              </tr>
+              <tr>
+                <th scope="row">API keys</th>
+                <td><strong>None</strong> — synthesis runs on <code>localhost</code> only. No cloud TTS signup.</td>
+              </tr>
+              <tr>
+                <th scope="row">Subscription</th>
+                <td><strong>None</strong> for Aftertone — install once, use in every project.</td>
+              </tr>
+              <tr>
+                <th scope="row">Setup</th>
+                <td><strong>One command</strong> — downloads free ONNX weights from Hugging Face (public models; no token required by default).</td>
+              </tr>
+              <tr>
+                <th scope="row">Languages</th>
+                <td><strong>Many locales</strong> via Supertonic — <code>/aftertone-lang</code> in Cursor; write <code>&lt;spoken_summary&gt;</code> in that language.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="free-note">
+          Your <strong>coding agent</strong> (Cursor, Claude, etc.) may have its own plan or API keys — that is separate from Aftertone, which only adds local voice after each reply.
+        </p>
+      </div>
+    </section>
+
     <section class="alt">
       <div class="wrap">
         <div class="section-head">
@@ -114,8 +163,12 @@
         </div>
         <div class="cards">
           <article class="card">
+            <h3>Free — no API keys</h3>
+            <p>No paid tier, no cloud TTS account, no API keys for Aftertone. Install once; speech stays on your machine with ONNX.</p>
+          </article>
+          <article class="card">
             <h3>Private by default</h3>
-            <p>Audio is synthesized locally with ONNX. Your thread is not sent to a hosted TTS service.</p>
+            <p>Audio is synthesized locally. Your reply text is not sent to a hosted text-to-speech service.</p>
           </article>
           <article class="card">
             <h3>Fast hooks (once Cursor runs them)</h3>
