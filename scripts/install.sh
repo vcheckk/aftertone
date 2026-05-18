@@ -115,10 +115,12 @@ clone_or_update() {
     git -C "${INSTALL_DIR}" fetch origin "${BRANCH}" --depth 1 2>/dev/null || \
       git -C "${INSTALL_DIR}" fetch origin "${BRANCH}"
     git -C "${INSTALL_DIR}" checkout "${BRANCH}"
-    git -C "${INSTALL_DIR}" pull --ff-only origin "${BRANCH}" || {
-      echo "install: could not fast-forward; check ${INSTALL_DIR} for local changes" >&2
-      exit 1
-    }
+    if ! git -C "${INSTALL_DIR}" pull --ff-only origin "${BRANCH}"; then
+      echo "==> install: local changes or diverged history; resetting to origin/${BRANCH}…"
+      git -C "${INSTALL_DIR}" fetch origin "${BRANCH}"
+      git -C "${INSTALL_DIR}" reset --hard "origin/${BRANCH}"
+      git -C "${INSTALL_DIR}" clean -fd
+    fi
   else
     echo "==> install: cloning ${REPO_URL} → ${INSTALL_DIR} (${BRANCH})…"
     mkdir -p "$(dirname "${INSTALL_DIR}")"
@@ -142,6 +144,15 @@ start_daemon() {
   echo "==> install: starting tts_daemon…"
   (cd "${root}/py" && uv run python tts_daemon_ctl.py start --repo-root ..) || {
     echo "install: daemon start failed (run manually: cd ${root}/py && uv run python tts_daemon_ctl.py start --repo-root ..)" >&2
+    return 1
+  }
+}
+
+enable_spoken_tts() {
+  local root="$1"
+  echo "==> install: enabling spoken TTS in speak_summary.toml…"
+  (cd "${root}/py" && uv run python speak_summary_toggle.py on) || {
+    echo "install: could not set enabled=true (use /aftertone-on in Cursor)" >&2
     return 1
   }
 }
@@ -232,6 +243,7 @@ main() {
   fi
 
   if [[ "${START_DAEMON}" == "1" ]]; then
+    enable_spoken_tts "${INSTALL_DIR}" || true
     start_daemon "${INSTALL_DIR}" || true
   fi
 

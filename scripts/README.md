@@ -19,8 +19,10 @@ Python **3.13** is pinned in `py/.python-version` (onnxruntime wheels; avoid sys
 | `--into PATH` | — | **Legacy (bash only):** copy hooks + `py/` into another repo |
 | `--branch NAME` | `-Branch NAME` | Git branch (default `main`) |
 | `--skip-assets` | `-SkipAssets` | Skip model download |
-| `--start-daemon` | `-StartDaemon` | Run `tts_daemon_ctl.py start` after bootstrap |
-| `--install-uv` | `-InstallUv` | Install [uv](https://docs.astral.sh/uv/) if missing |
+| `--start-daemon` | (default on Windows) | Run `tts_daemon_ctl.py start` after bootstrap |
+| `--install-uv` | (default on Windows) | Install [uv](https://docs.astral.sh/uv/) if missing |
+| — | `-NoStartDaemon` | Skip daemon start (Windows only) |
+| — | `-NoEnableTts` | Leave `enabled=false` in TOML (Windows only) |
 
 Env: `AFTERTONE_INSTALL_DIR`, `AFTERTONE_REPO_URL`, `AFTERTONE_BRANCH`.
 

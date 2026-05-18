@@ -9,8 +9,8 @@
 #   -Branch NAME         Git branch (default: main)
 #   -NoGlobal            Skip user-level Cursor hooks
 #   -SkipAssets          Skip Hugging Face model download
-#   -StartDaemon         Start tts_daemon after bootstrap
-#   -InstallUv           Install uv via Astral if missing
+#   -NoStartDaemon       Do not start tts_daemon after bootstrap
+#   -NoEnableTts         Leave speak_summary.toml enabled=false
 #   -Help
 
 param(
@@ -18,8 +18,8 @@ param(
     [string] $Branch = $(if ($env:AFTERTONE_BRANCH) { $env:AFTERTONE_BRANCH } else { "main" }),
     [switch] $NoGlobal,
     [switch] $SkipAssets,
-    [switch] $StartDaemon,
-    [switch] $InstallUv,
+    [switch] $NoStartDaemon,
+    [switch] $NoEnableTts,
     [switch] $Help
 )
 
@@ -29,15 +29,12 @@ $RepoUrl = if ($env:AFTERTONE_REPO_URL) { $env:AFTERTONE_REPO_URL } else { "http
 
 function Show-Help {
     @"
-Aftertone installer (Windows) — clone, bootstrap (uv + ONNX assets), optional daemon.
+Aftertone installer (Windows) — clone to %USERPROFILE%\aftertone, uv, models, hooks, daemon, enable TTS.
 
-One-liner:
+One-liner (does everything; only needs git + Git Bash):
   irm https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.ps1 | iex
 
-With options:
-  & ([scriptblock]::Create((irm .../install.ps1))) -InstallUv -StartDaemon
-
-Requires: git, Git for Windows (bash for Cursor hooks). Python 3.13 via uv (see py/.python-version).
+Requires: git, Git for Windows (bash for Cursor hooks). uv and Python 3.13 are installed automatically.
 
 Environment:
   AFTERTONE_INSTALL_DIR   Same as -InstallDir
@@ -65,13 +62,11 @@ function Ensure-Uv {
     $localBin = Join-Path $env:USERPROFILE ".local\bin"
     if (Test-Path $localBin) { $env:Path = "$localBin;$env:Path" }
     if (Get-Command uv -ErrorAction SilentlyContinue) { return }
-    if ($InstallUv) {
-        Write-Host "==> install: uv not found; running Astral installer…"
-        irm https://astral.sh/uv/install.ps1 | iex
-        $env:Path = "$localBin;$env:Path"
-    }
+    Write-Host "==> install: uv not found; running Astral installer…"
+    irm https://astral.sh/uv/install.ps1 | iex
+    $env:Path = "$localBin;$env:Path"
     if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
-        Write-Error "install: uv is required. Install: https://docs.astral.sh/uv/ or re-run with -InstallUv"
+        Write-Error "install: uv install failed. Install manually: https://docs.astral.sh/uv/"
     }
 }
 
@@ -85,10 +80,17 @@ function Clone-OrUpdate {
         if ($LASTEXITCODE -ne 0) { git -C $dir fetch origin $Branch 2>&1 | Out-Null }
         git -C $dir checkout $Branch 2>&1 | Out-Null
         git -C $dir pull --ff-only origin $Branch 2>&1 | Out-Null
-        $ErrorActionPreference = $gitEa
         if ($LASTEXITCODE -ne 0) {
-            Write-Error "install: could not fast-forward; check $dir for local changes"
+            Write-Host "==> install: local changes or diverged history; resetting to origin/$Branch…"
+            git -C $dir fetch origin $Branch 2>&1 | Out-Null
+            git -C $dir reset --hard "origin/$Branch" 2>&1 | Out-Null
+            git -C $dir clean -fd 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                $ErrorActionPreference = $gitEa
+                Write-Error "install: could not reset $dir to origin/$Branch"
+            }
         }
+        $ErrorActionPreference = $gitEa
     } else {
         Write-Host "==> install: cloning $RepoUrl → $dir ($Branch)…"
         $parent = Split-Path $dir -Parent
@@ -114,32 +116,44 @@ function Install-GlobalHooks {
     param([string] $Root)
     Write-Host "==> install: user-level Cursor hooks ($env:USERPROFILE\.cursor)…"
     Push-Location (Join-Path $Root "py")
-    $pyVer = $null
+    $pyArgs = Get-PythonVersionArg -Root $Root
+    & uv run @pyArgs python install_global_hooks.py --install-dir $Root
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "install: global hooks registration failed"
+    }
+    Pop-Location
+}
+
+function Get-PythonVersionArg {
+    param([string] $Root)
     $pvFile = Join-Path $Root "py\.python-version"
-    if (Test-Path $pvFile) { $pyVer = (Get-Content $pvFile -Raw).Trim() }
-    if ($pyVer) {
-        uv run --python $pyVer python install_global_hooks.py --install-dir $Root
-    } else {
-        uv run python install_global_hooks.py --install-dir $Root
+    if (Test-Path $pvFile) {
+        $ver = (Get-Content $pvFile -Raw).Trim()
+        if ($ver) { return @("--python", $ver) }
+    }
+    return @()
+}
+
+function Enable-SpokenTts {
+    param([string] $Root)
+    Write-Host "==> install: enabling spoken TTS in speak_summary.toml…"
+    Push-Location (Join-Path $Root "py")
+    $pyArgs = Get-PythonVersionArg -Root $Root
+    & uv run @pyArgs python speak_summary_toggle.py on
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "install: could not set enabled=true (use /aftertone-on in Cursor)"
     }
     Pop-Location
 }
 
 function Start-TtsDaemon {
     param([string] $Root)
-    Write-Host "==> install: starting tts_daemon…"
+    Write-Host "==> install: starting tts_daemon (may take 1-2 min while models load)…"
     Push-Location (Join-Path $Root "py")
-    $pyVer = $null
-    $pvFile = Join-Path $Root "py\.python-version"
-    if (Test-Path $pvFile) { $pyVer = (Get-Content $pvFile -Raw).Trim() }
-    try {
-        if ($pyVer) {
-            uv run --python $pyVer python tts_daemon_ctl.py start --repo-root ..
-        } else {
-            uv run python tts_daemon_ctl.py start --repo-root ..
-        }
-    } catch {
-        Write-Warning "install: daemon start failed (run manually: cd $Root\py; uv run python tts_daemon_ctl.py start --repo-root ..)"
+    $pyArgs = Get-PythonVersionArg -Root $Root
+    & uv run @pyArgs python tts_daemon_ctl.py start --repo-root ..
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "install: daemon start failed; see $Root\.cursor\hooks\state\tts-daemon.log"
     }
     Pop-Location
 }
@@ -151,16 +165,14 @@ function Show-NextSteps {
 
 ==> Aftertone is ready at: $Root
 
-Global install: spoken TTS hooks run in any Cursor project you open (if -NoGlobal was not used).
-Config slash commands: open $Root in Cursor, or use /aftertone-* in Agent chat.
-
-Next:
-  1. Enable Hooks in Cursor Settings
-  2. Trust each workspace where you want TTS
-  3. Daemon: cd $Root\py; uv run python tts_daemon_ctl.py start --repo-root ..
-  4. Turn on TTS: /aftertone-on in Agent chat
-
+Installed: Python deps, ONNX assets, user Cursor hooks, tts_daemon, spoken TTS enabled in config.
 Hooks file: $cursorHooks
+
+In Cursor only:
+  1. Settings -> enable Hooks
+  2. Trust the workspace(s) where you want spoken summaries
+  3. Optional: open $Root and use /aftertone-status to verify
+
 Docs: $Root\README.md
 "@
 }
@@ -174,7 +186,11 @@ if (-not $NoGlobal) {
     Install-GlobalHooks -Root $InstallDir
 }
 
-if ($StartDaemon) {
+if (-not $NoEnableTts) {
+    Enable-SpokenTts -Root $InstallDir
+}
+
+if (-not $NoStartDaemon) {
     Start-TtsDaemon -Root $InstallDir
 }
 

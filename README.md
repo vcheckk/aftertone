@@ -68,10 +68,10 @@ If you are searching for **local text-to-speech**, **on-device** assistants, **A
 
 ## Requirements
 
-- [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- **Linux / macOS:** [uv](https://docs.astral.sh/uv/getting-started/installation/) (or use `--install-uv` on the one-liner).
+- **Windows:** [Git for Windows](https://git-scm.com/download/win) only — the one-liner installs **uv**, Python **3.13**, models, hooks, and the daemon for you.
 - **Cursor (current adapter):** Hooks on, **trusted** workspace, `.cursor/hooks.json` with `"version": 1`.
 - ONNX weights under `./assets` (`Supertone/supertonic-3` — bootstrap downloads them).
-- **Windows:** [Git for Windows](https://git-scm.com/download/win) (Git Bash runs hook scripts). Python **3.13** is pinned via `py/.python-version` (onnxruntime has no 3.14 wheels yet).
 
 ## Quick start
 
@@ -94,19 +94,17 @@ curl -fsSL https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/i
 
 ### Windows — one-line install
 
-Requires **git** and **Git Bash** (included with [Git for Windows](https://git-scm.com/download/win)). Run in **PowerShell**:
+Requires **git** and **Git Bash** ([Git for Windows](https://git-scm.com/download/win)). Run in **PowerShell** — one command installs everything to the right places:
 
 ```powershell
 irm https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.ps1 | iex
 ```
 
-With options (download script first, then invoke):
+That clones/updates **`%USERPROFILE%\aftertone`**, installs **uv** + Python **3.13**, downloads ONNX assets, registers **`%USERPROFILE%\.cursor\hooks.json`**, starts **`tts_daemon`**, and turns spoken TTS **on** in config. Re-runs reset a dirty clone to `origin/main` automatically.
 
-```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.ps1))) -InstallUv -StartDaemon
-```
+After install, in Cursor only: enable **Hooks** in Settings and **trust** your workspace(s).
 
-Default install dir: **`%USERPROFILE%\aftertone`**. Hooks: **`%USERPROFILE%\.cursor\hooks.json`**.
+Optional flags (download script first, then invoke): `-NoStartDaemon`, `-NoGlobal`, `-SkipAssets`, `-NoEnableTts`.
 
 **Legacy:** copy hooks + `py/` into one repo (`--into .` on Linux, or `--no-global` on Windows) — only if you cannot use global hooks.
 
