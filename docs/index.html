@@ -118,8 +118,8 @@
             <p>Audio is synthesized locally with ONNX. Your thread is not sent to a hosted TTS service.</p>
           </article>
           <article class="card">
-            <h3>Fast hooks</h3>
-            <p>The heavy work lives in <code>tts_daemon.py</code>. Each hook only prepares text and posts JSON.</p>
+            <h3>Fast hooks (once Cursor runs them)</h3>
+            <p>The heavy work lives in <code>tts_daemon.py</code>. Each hook only prepares text and posts JSON. On Windows, Cursor may delay calling hooks longer than on Linux or macOS — see <a href="docs.html#windows-hook-latency">docs</a>.</p>
           </article>
           <article class="card">
             <h3>Cursor today, more soon</h3>

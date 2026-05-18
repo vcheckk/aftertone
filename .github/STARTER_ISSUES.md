@@ -51,7 +51,14 @@ Design how to get the same JSON shape `speak_summary_prepare.py` expects (or POS
 ## Deliverable
 Links to official docs / events, proposed flow, and risks — PR can be docs-only for the first merge.
 
-See CONTRIBUTING table row **Claude Code**.
+## Checklist (see CONTRIBUTING.md § Claude Code — contributor todos)
+- [ ] Research hook / event API
+- [ ] Speech adapter → prepare or `/say`
+- [ ] Install root + `speak_summary.toml`
+- [ ] Spoken-summary guidance for models
+- [ ] Smoke test
+- [ ] (Optional) MCP: `aftertone.mcp_server` + CLI parity for on/off/status/set/restart
+- [ ] README “Claude setup” when proven
 ```
 
 ---
@@ -69,7 +76,37 @@ Research Codex CLI or IDE extension points for “response finished” and how t
 ## Deliverable
 Design note in `docs/` or issue thread; optional proof-of-concept script.
 
-See CONTRIBUTING table row **OpenAI Codex**.
+## Checklist (see CONTRIBUTING.md § OpenAI Codex — contributor todos)
+- [ ] Research lifecycle / hook API
+- [ ] Speech adapter → prepare or `/say` (Windows + Linux)
+- [ ] Install root + shared TOML
+- [ ] Spoken-summary guidance for models
+- [ ] Smoke test
+- [ ] (Optional) MCP config + CLI parity (`py/aftertone/mcp_server.py`)
+- [ ] README “Codex setup” when proven
+```
+
+---
+
+## 6. MCP control plane parity (`help wanted`, `adapter`, `enhancement`)
+
+**Title:** `[adapter] Expand aftertone MCP tools to match CLI (Claude / Codex / any MCP host)`
+
+**Body:**
+
+```markdown
+## Goal
+Optional control for agents that support MCP but not Cursor slash commands. Speech still comes from hooks, not MCP.
+
+## Scope
+- Extend `py/aftertone/mcp_server.py` (restart, repair, set lang|speed|mode|voice, …)
+- Document `scripts/cursor-global/mcp.aftertone.json` with install-dir resolution
+- Keep all behavior delegated to `python -m aftertone`
+
+## Acceptance
+- [ ] Tools mirror CLI subcommands or are generated from one source
+- [ ] CONTRIBUTING Claude/Codex MCP todos checked off or linked
+- [ ] No regression to Cursor slash-command workflow
 ```
 
 ---

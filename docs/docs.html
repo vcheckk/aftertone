@@ -45,6 +45,7 @@
         <a href="#daemon">Daemon commands</a>
         <a href="#config">Configuration</a>
         <a href="#spoken-summary">Spoken summaries</a>
+        <a href="#windows-hook-latency">Windows hook latency</a>
         <a href="#troubleshooting">Troubleshooting</a>
         <a href="#reference">Full reference</a>
       </nav>
@@ -128,7 +129,7 @@ uv run --directory py python -m aftertone restart
 uv run --directory py python -m aftertone doctor
 uv run --directory py python -m aftertone repair</code></pre>
       </div>
-      <p><code>set voice</code> restarts the daemon by default. <code>set lang</code> syncs <a href="https://github.com/omarelkhal/aftertone/blob/main/.cursor/rules/spoken-summary.mdc"><code>spoken-summary.mdc</code></a>. Install runs <code>apply-defaults</code> (<code>summary_mode = tag_only</code>, <code>total_step = 8</code>).</p>
+      <p><code>set voice</code> restarts the daemon by default. <code>set lang</code> syncs <a href="https://github.com/omarelkhal/aftertone/blob/main/.cursor/rules/spoken-summary.mdc"><code>spoken-summary.mdc</code></a>. Install runs <code>apply-defaults</code> (<code>summary_mode = tag_only</code>, <code>total_step = 8</code>, <code>spoken_summary_max_sentences = 0</code> for the full tag).</p>
 
       <h2 id="cursor">Cursor setup</h2>
       <div class="cards" style="margin-bottom: 1.25rem;">
@@ -216,6 +217,31 @@ Tests pass and the daemon is restarted!! Your next reply should sound cleaner??
       <p>Repo default <code>summary_mode = "tag_only"</code> — no speech when the tag is missing (set <code>summary_mode = "auto"</code> in TOML for heuristic fallback). For livelier delivery, end <strong>each sentence</strong> in the tag with <code>!!</code>, <code>??</code>, <code>?!</code>, or <code>!?</code>. Inline <code>&lt;sigh&gt;</code> tags are optional via <code>/aftertone-expression</code> (default <code>off</code>).</p>
       <p>Rules for agents: <a href="https://github.com/omarelkhal/aftertone/blob/main/.cursor/rules/spoken-summary.mdc"><code>.cursor/rules/spoken-summary.mdc</code></a>.</p>
 
+      <h2 id="windows-hook-latency">Windows hook latency (Cursor, not Aftertone)</h2>
+      <p>
+        If speech feels slow on <strong>Windows</strong> but the install looks healthy, split the wait into two parts:
+        <strong>(1)</strong> Cursor calling the hook after the reply, and <strong>(2)</strong> Aftertone preparing audio once the hook runs.
+        On <strong>Linux and macOS</strong>, part (1) is usually much smaller; on Windows it often dominates.
+      </p>
+      <div class="callout callout-warn">
+        <strong>This is a Cursor platform issue, not an Aftertone product bug.</strong>
+        Cursor’s hook runner on Windows can take far longer to <em>start</em> your hook than the hook script takes to execute.
+        Community reports and Cursor staff replies are tracked in
+        <a href="https://forum.cursor.com/t/hook-execution-reports-8-seconds-delay-despite-actual-execution-taking-only-5ms/147584" rel="noopener noreferrer">Hook execution reports 8+ seconds delay despite actual execution taking only 5ms</a>
+        (minimal hooks measured in milliseconds while Cursor reported multi-second delays).
+        The Cursor team has described improvements (reduced shell launch overhead); we hope later Cursor versions narrow this gap on Windows.
+      </div>
+      <p><strong>What Aftertone does once the hook runs:</strong> read the reply text, POST to the local <code>tts_daemon</code>, synthesize, and play. That path is typically a few seconds on CPU, tunable with <code>total_step</code> and voice settings.</p>
+      <p><strong>What Aftertone cannot fix:</strong> how long Cursor waits after the assistant message before it invokes <code>afterAgentResponse</code>.</p>
+      <p><strong>How to verify on your machine</strong> (install dir, e.g. <code>%USERPROFILE%\aftertone</code>):</p>
+      <ul style="color: var(--muted); line-height: 1.8;">
+        <li><code>.cursor/hooks/state/speak_summary-hook.log</code> — step lines tagged <code>latency</code></li>
+        <li><code>.cursor/hooks/state/pipeline_trace.jsonl</code> — full trace per reply (<code>phase: hook</code> and <code>phase: sound</code>)</li>
+        <li><code>hook_minus_transcript_mtime_ms</code> — proxy for Cursor delay after the transcript file was last written</li>
+        <li><code>first_sound_since_hook_ms</code> — Aftertone time from hook start to first audio</li>
+      </ul>
+      <p>Run <code>/aftertone-doctor</code> or <code>uv run --directory py python -m aftertone doctor</code> after a slow reply. Updating Cursor may help; comparing the same project on Ubuntu or macOS is the clearest A/B test.</p>
+
       <h2 id="troubleshooting">Troubleshooting</h2>
       <div class="cards">
         <article class="card">
@@ -229,6 +255,10 @@ Tests pass and the daemon is restarted!! Your next reply should sound cleaner??
         <article class="card">
           <h3>TOML change had no effect</h3>
           <p>Voice, port, GPU, and ONNX path need <code>/aftertone-restart</code> or <code>tts_daemon_ctl.py restart</code>. Speed, lang, and <code>expression_mode</code> apply on the next hook without restart.</p>
+        </article>
+        <article class="card">
+          <h3>Speech feels very delayed (Windows)</h3>
+          <p>Often mostly <strong>Cursor hook scheduling</strong>, not Aftertone synthesis. See <a href="#windows-hook-latency">Windows hook latency</a> and the <a href="https://forum.cursor.com/t/hook-execution-reports-8-seconds-delay-despite-actual-execution-taking-only-5ms/147584" rel="noopener noreferrer">Cursor forum thread</a>. Check <code>pipeline_trace.jsonl</code> for <code>hook_minus_transcript_mtime_ms</code> vs <code>first_sound_since_hook_ms</code>.</p>
         </article>
         <article class="card">
           <h3>Wrong text spoken</h3>

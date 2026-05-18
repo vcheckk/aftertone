@@ -43,7 +43,15 @@ def build_speakable_text(
     hcap = effective_heuristic_cap(cfg, max_chars)
 
     if spoken:
-        text = spoken_tag_to_speakable(spoken, effective_tag_cap(cfg, max_chars))
+        try:
+            tag_max_sent = int(cfg.get("spoken_summary_max_sentences", 0))
+        except (TypeError, ValueError):
+            tag_max_sent = 0
+        text = spoken_tag_to_speakable(
+            spoken,
+            effective_tag_cap(cfg, max_chars),
+            max_sentences=max(0, tag_max_sent),
+        )
         text = apply_expression_fn(text, flow_state, cfg.get("expression_mode", "off"))
         return text.strip(), "tag"
 

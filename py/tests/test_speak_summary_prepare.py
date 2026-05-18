@@ -63,7 +63,7 @@ def test_heuristic_skips_low_substance_opener(tmp_path):
     out = run_prepare(
         tmp_path,
         "Sure, I can help. Added tests for the summary picker. They cover limits.",
-        "only_speak_spoken_summary = false\nheuristic_max_sentences = 1\n",
+        'summary_mode = "heuristic"\nonly_speak_spoken_summary = false\nheuristic_max_sentences = 1\n',
     )
 
     assert out["text"] == "Added tests for the summary picker."
@@ -79,7 +79,7 @@ for i in range(100):
 ```
 Implemented the fix for fenced-code replies. Added regression tests. Updated docs.
 """,
-        "only_speak_spoken_summary = false\nheuristic_code_fence_fraction = 0.05\nheuristic_max_sentences = 3\nheuristic_max_sentences_code_heavy = 1\n",
+        'summary_mode = "heuristic"\nonly_speak_spoken_summary = false\nheuristic_code_fence_fraction = 0.05\nheuristic_max_sentences = 3\nheuristic_max_sentences_code_heavy = 1\n',
     )
 
     assert out["text"] == "Implemented the fix for fenced-code replies."
@@ -89,7 +89,7 @@ def test_heuristic_max_chars_clamps_long_sentence(tmp_path):
     out = run_prepare(
         tmp_path,
         "Implemented a very long spoken summary sentence that should be shortened before it reaches the daemon.",
-        "only_speak_spoken_summary = false\nheuristic_max_chars = 48\n",
+        'summary_mode = "heuristic"\nonly_speak_spoken_summary = false\nheuristic_max_chars = 48\n',
     )
 
     assert out["text"] == "Implemented a very long spoken summary..."

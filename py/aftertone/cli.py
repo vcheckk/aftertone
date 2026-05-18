@@ -7,8 +7,10 @@ import argparse
 import json
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
+from datetime import date
 from pathlib import Path
 
 from aftertone.config import cfg_enabled, load_config, summary_mode
@@ -108,8 +110,46 @@ def cmd_apply_defaults(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_speak(args: argparse.Namespace) -> int:
-    repo = _repo(args.repo_root)
+def _spoken_log_path(repo: Path) -> Path:
+    return state_dir(repo) / "spoken" / f"{date.today().isoformat()}.jsonl"
+
+
+def _find_spoken_job(repo: Path, job_id: str) -> dict | None:
+    log_path = _spoken_log_path(repo)
+    if not log_path.is_file():
+        return None
+    try:
+        lines = log_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+    for line in reversed(lines):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if rec.get("job_id") == job_id:
+            return rec
+    return None
+
+
+def _wait_spoken_job(
+    repo: Path, job_id: str, timeout_sec: float
+) -> dict | None:
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        rec = _find_spoken_job(repo, job_id)
+        if rec is not None:
+            return rec
+        time.sleep(0.05)
+    return None
+
+
+def _post_say(
+    repo: Path, payload: dict[str, object], *, timeout_sec: float = 60.0
+) -> tuple[int, dict]:
     cfg = load_config(repo)
     port = int(cfg.get("port", 8765))
     port_file = state_dir(repo) / "tts-daemon.port"
@@ -118,13 +158,6 @@ def cmd_speak(args: argparse.Namespace) -> int:
             port = int(port_file.read_text(encoding="utf-8").strip())
         except ValueError:
             pass
-    payload = {
-        "text": args.text,
-        "totalStep": int(cfg.get("total_step", 8)),
-        "speed": float(cfg.get("speed", 1.0)),
-        "lang": str(cfg.get("lang", "en")),
-        "mode": str(cfg.get("mode", "queue")).lower(),
-    }
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         f"http://127.0.0.1:{port}/say",
@@ -132,13 +165,120 @@ def cmd_speak(args: argparse.Namespace) -> int:
         headers={"Content-Type": "application/json"},
         method="POST",
     )
+    with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
+        raw = resp.read().decode("utf-8")
+        body: dict = {}
+        if raw.strip():
+            try:
+                body = json.loads(raw)
+            except json.JSONDecodeError:
+                body = {"raw": raw}
+        return resp.status, body
+
+
+def _speak_metrics_out(
+    status: int,
+    job_id: str,
+    client_ms: int,
+    metrics: dict,
+    *,
+    warning: str | None = None,
+) -> dict:
+    out = {
+        "http_status": status,
+        "job_id": job_id,
+        "first_audio_ms": metrics.get("first_audio_ms"),
+        "synth_ms": metrics.get("synth_ms"),
+        "play_ms": metrics.get("play_ms"),
+        "took_ms": metrics.get("took_ms"),
+        "client_total_ms": client_ms,
+        "total_step": metrics.get("total_step"),
+    }
+    if metrics.get("error"):
+        out["error"] = metrics["error"]
+    if warning:
+        out["warning"] = warning
+    return out
+
+
+def cmd_speak(args: argparse.Namespace) -> int:
+    repo = _repo(args.repo_root)
+    cfg = load_config(repo)
+    payload: dict[str, object] = {
+        "text": args.text,
+        "totalStep": int(cfg.get("total_step", 8)),
+        "speed": float(cfg.get("speed", 1.0)),
+        "lang": str(cfg.get("lang", "en")),
+        "mode": str(cfg.get("mode", "queue")).lower(),
+    }
+    no_wait = getattr(args, "no_wait", False)
+    if not no_wait:
+        payload["wait"] = True
+
+    wait_timeout = float(getattr(args, "wait_timeout", 120.0))
+    http_timeout = max(60.0, wait_timeout + 15.0) if not no_wait else 60.0
+    t0 = time.perf_counter()
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            print(resp.status)
-            return 0
+        status, body = _post_say(repo, payload, timeout_sec=http_timeout)
     except urllib.error.URLError as exc:
         print(f"speak failed: {exc}", file=sys.stderr)
         return 1
+
+    job_id = str(body.get("id") or "")
+
+    if no_wait:
+        client_ms = int((time.perf_counter() - t0) * 1000)
+        print(json.dumps({"http_status": status, "client_total_ms": client_ms, **body}, indent=2))
+        return 0 if status in (200, 202) else 1
+
+    if status == 200 and job_id:
+        client_ms = int((time.perf_counter() - t0) * 1000)
+        print(
+            json.dumps(
+                _speak_metrics_out(status, job_id, client_ms, body),
+                indent=2,
+            )
+        )
+        return 0 if not body.get("error") else 1
+
+    if not job_id:
+        client_ms = int((time.perf_counter() - t0) * 1000)
+        print(json.dumps({"http_status": status, "client_total_ms": client_ms, **body}, indent=2))
+        return 1 if status >= 400 else 0
+
+    # Old daemon (202 + log without timing fields): poll jsonl fallback.
+    rec = _wait_spoken_job(repo, job_id, wait_timeout)
+    client_ms = int((time.perf_counter() - t0) * 1000)
+    if rec is None:
+        print(
+            json.dumps(
+                {
+                    "http_status": status,
+                    "job_id": job_id,
+                    "error": "timeout_waiting_for_job",
+                    "client_total_ms": client_ms,
+                    "wait_timeout_sec": wait_timeout,
+                },
+                indent=2,
+            ),
+            file=sys.stderr,
+        )
+        return 1
+
+    warning = None
+    if "first_audio_ms" not in rec:
+        warning = (
+            f"daemon_outdated: the running daemon at {repo} is missing timing fields. "
+            "Update that install's py/ (git pull or copy from dev), then: "
+            "uv run --directory py python -m aftertone restart"
+        )
+    print(
+        json.dumps(
+            _speak_metrics_out(status, job_id, client_ms, rec, warning=warning),
+            indent=2,
+        )
+    )
+    return 0
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
@@ -203,15 +343,30 @@ def main(argv: list[str] | None = None) -> int:
         ("status", cmd_status, "Show config and daemon status"),
         ("restart", cmd_restart, "Restart TTS daemon"),
         ("repair", cmd_repair, "Re-register hooks and set install defaults"),
-        ("apply-defaults", cmd_apply_defaults, "Set tag_only + total_step 8 in speak_summary.toml"),
+        ("apply-defaults", cmd_apply_defaults, "Set tag_only, total_step 8, full spoken_summary tag"),
         ("doctor", cmd_doctor, "Diagnostics"),
     ):
         p = sub.add_parser(name, help=help_text)
         p.set_defaults(func=fn)
 
-    sp = sub.add_parser("speak", help="Speak text via daemon")
+    sp = sub.add_parser(
+        "speak",
+        help="Speak text via daemon; waits and prints timing (first_audio_ms)",
+    )
     sp.add_argument("text", help="Text to synthesize")
-    sp.set_defaults(func=cmd_speak)
+    sp.add_argument(
+        "--no-wait",
+        action="store_true",
+        help="Return after queueing (202); do not wait for audio metrics",
+    )
+    sp.add_argument(
+        "--wait-timeout",
+        type=float,
+        default=120.0,
+        metavar="SEC",
+        help="Max seconds to wait for job completion (default 120)",
+    )
+    sp.set_defaults(func=cmd_speak, no_wait=False)
 
     pp = sub.add_parser("prepare", help="Prepare payload from hook JSON file")
     pp.add_argument("hook_json", help="Path to hook JSON")

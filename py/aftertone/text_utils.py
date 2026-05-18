@@ -134,7 +134,9 @@ def plain_excerpt(raw: str, max_chars: int) -> str:
     return clamp(s, max_chars) if s else ""
 
 
-def spoken_tag_to_speakable(raw_inner: str, cap: int) -> str:
+def spoken_tag_to_speakable(
+    raw_inner: str, cap: int, *, max_sentences: int = 0
+) -> str:
     s = strip_markdownish(raw_inner.replace("\n", " "))
     if not s:
         return ""
@@ -145,6 +147,8 @@ def spoken_tag_to_speakable(raw_inner: str, cap: int) -> str:
         return clamp(s, cap)
     out: list[str] = []
     for p in parts:
+        if max_sentences > 0 and len(out) >= max_sentences:
+            break
         trial = " ".join(out + [p]).strip() if out else p.strip()
         if len(trial) <= cap:
             out.append(p)

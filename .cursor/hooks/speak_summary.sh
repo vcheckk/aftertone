@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Aftertone / Cursor hook: speak a short summary via tts_daemon (afterAgentResponse preferred — has inline `text`;
-# `stop` often lacks transcript_path). See speak_summary_prepare.py.
+# `stop` often lacks transcript_path). See speak_summary_prepare.py / aftertone.hook_run.
 # Never fails the hook: always exits 0.
 #
 # If nothing speaks, check:
@@ -30,25 +30,24 @@ LOG="${STATE_DIR}/speak_summary-hook.log"
 PREP_ERR="${STATE_DIR}/speak_summary-prepare.stderr.log"
 mkdir -p "${STATE_DIR}"
 
-# Cursor GUI often has a minimal PATH (no uv, no cargo bin). Prefer project venv.
 export PATH="${HOME}/.local/bin:${HOME}/.cargo/bin:/usr/local/bin:/opt/homebrew/bin:${PATH}"
 
 log() {
   echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") $*" >>"${LOG}"
 }
 
-# Do not store hook JSON in a bash variable — backticks, $, and quotes corrupt the payload.
 HOOK_STDIN="$(mktemp "${STATE_DIR}/hook_stdin.XXXXXX.json")"
 cat >"${HOOK_STDIN}" || true
-VENV_PY=""
-if VENV_PY="$(aftertone_venv_python "${PY}")"; then
-  "${VENV_PY}" "${PY}/hook_stdin_normalize.py" "${HOOK_STDIN}" 2>/dev/null || true
-fi
 HOOK_BYTES="$(wc -c <"${HOOK_STDIN}" | tr -d ' \n\r')"
-if VENV_PY="$(aftertone_venv_python "${PY}")"; then
-  <"${HOOK_STDIN}" "${VENV_PY}" "${PY}/hook_payload_trace.py" "${STATE_DIR}/hook_payload_trace.jsonl" 2>/dev/null || true
-fi
 log "hook_invoked hook_json_bytes=${HOOK_BYTES}"
+
+# Optional debug trace (off by default — each extra Python spawn costs seconds on Windows).
+if [[ "${AFTERTONE_HOOK_TRACE:-}" == "1" ]]; then
+  if VENV_PY="$(aftertone_venv_python "${PY}")"; then
+    "${VENV_PY}" "${PY}/hook_stdin_normalize.py" "${HOOK_STDIN}" 2>/dev/null || true
+    <"${HOOK_STDIN}" "${VENV_PY}" "${PY}/hook_payload_trace.py" "${STATE_DIR}/hook_payload_trace.jsonl" 2>/dev/null || true
+  fi
+fi
 
 read_port() {
   local toml="${REPO}/.cursor/hooks/speak_summary.toml"
@@ -61,7 +60,7 @@ read_port() {
     file_port="$(tr -d ' \n\r' <"${PORT_FILE}")"
     if [[ -n "${toml_port}" ]] && [[ -n "${file_port}" ]] && [[ "${toml_port}" != "${file_port}" ]] &&
       [[ "${toml_port}" =~ ^[0-9]+$ ]] && [[ "${file_port}" =~ ^[0-9]+$ ]]; then
-      log "port_mismatch toml_port=${toml_port} state_file_port=${file_port} hint=restart_daemon_cd_py_uv_run_tts_daemon_ctl_restart"
+      log "port_mismatch toml_port=${toml_port} state_file_port=${file_port} hint=restart_daemon"
     fi
     echo "${file_port}"
     return
@@ -71,26 +70,6 @@ read_port() {
     return
   fi
   echo "8765"
-}
-
-run_prepare() {
-  : >"${PREP_ERR}"
-  local vpy=""
-  if vpy="$(aftertone_venv_python "${PY}")"; then
-    <"${HOOK_STDIN}" "${vpy}" "${PY}/speak_summary_prepare.py" 2>>"${PREP_ERR}"
-    return $?
-  fi
-  if command -v uv >/dev/null 2>&1; then
-    <"${HOOK_STDIN}" bash -c "cd \"${PY}\" && uv run python speak_summary_prepare.py" 2>>"${PREP_ERR}"
-    return $?
-  fi
-  if command -v python3 >/dev/null 2>&1; then
-    <"${HOOK_STDIN}" env PYTHONPATH="${PY}" python3 "${PY}/speak_summary_prepare.py" 2>>"${PREP_ERR}"
-    return $?
-  fi
-  log "prepare_skip no_python venv_missing=${PY}/.venv uv_missing=1"
-  echo '{}'
-  return 1
 }
 
 ensure_daemon() {
@@ -110,32 +89,23 @@ ensure_daemon() {
   sleep 0.5
 }
 
-post_say() {
-  local port="$1"
-  local payload="$2"
-  local tmp vpy http_code
-  tmp="$(mktemp "${STATE_DIR}/say_payload.XXXXXX.json")"
-  printf '%s' "${payload}" >"${tmp}"
-  if [[ -f "${PY}/post_say_hook.py" ]] && vpy="$(aftertone_venv_python "${PY}")"; then
-    http_code="$("${vpy}" "${PY}/post_say_hook.py" "${port}" "${tmp}" 2>/dev/null || true)"
-    if [[ "${http_code}" == "202" ]] || [[ "${http_code}" == "200" ]]; then
-      rm -f "${tmp}"
-      return 0
-    fi
-  elif command -v curl >/dev/null 2>&1; then
-    if curl -fsS -m 30 -X POST "http://127.0.0.1:${port}/say" \
-      -H "Content-Type: application/json" \
-      --data-binary @"${tmp}" >/dev/null 2>&1; then
-      rm -f "${tmp}"
-      return 0
-    fi
-  fi
-  log "post_say_failed port=${port} http=${http_code:-none}"
-  rm -f "${tmp}"
-  return 1
-}
+PORT="$(read_port)"
+ensure_daemon "${PORT}"
+PORT="$(read_port)"
 
-PAYLOAD="$(run_prepare || true)"
+PAYLOAD=""
+: >"${PREP_ERR}"
+export PYTHONPATH="${PY}${PYTHONPATH:+:${PYTHONPATH}}"
+if vpy="$(aftertone_venv_python "${PY}")"; then
+  PAYLOAD="$("${vpy}" -m aftertone.hook_run "${HOOK_STDIN}" 2>>"${PREP_ERR}" || true)"
+elif command -v uv >/dev/null 2>&1; then
+  PAYLOAD="$(cd "${PY}" && uv run python -m aftertone.hook_run "${HOOK_STDIN}" 2>>"${PREP_ERR}" || true)"
+fi
+# Fallback if hook_run failed (e.g. import error): legacy prepare + post.
+if [[ "${PAYLOAD}" != "{"* ]] && vpy="$(aftertone_venv_python "${PY}")"; then
+  PAYLOAD="$(<"${HOOK_STDIN}" "${vpy}" "${PY}/speak_summary_prepare.py" --post 2>>"${PREP_ERR}" || true)"
+fi
+
 PAYLOAD="$(echo "${PAYLOAD}" | tr -d '\n\r' | head -c 8000)"
 if [[ "${PAYLOAD}" != "{"* ]]; then
   log "prepare_bad_output first_bytes=${PAYLOAD:0:120}"
@@ -155,7 +125,7 @@ if [[ "${PAYLOAD}" == "{}" ]] || [[ -z "${PAYLOAD}" ]]; then
     if [[ -n "${skip_detail}" ]]; then
       log "prepare_skip no_text ${skip_detail}"
     else
-      log "prepare_skip no_text (check speak_summary.toml: enabled, only_speak_spoken_summary, quiet_hours)"
+      log "prepare_skip no_text (check speak_summary.toml: enabled, summary_mode, quiet_hours)"
     fi
   fi
   rm -f "${HOOK_STDIN}"
@@ -163,14 +133,13 @@ if [[ "${PAYLOAD}" == "{}" ]] || [[ -z "${PAYLOAD}" ]]; then
 fi
 
 log "prepare_ok payload_chars=${#PAYLOAD}"
-
-PORT="$(read_port)"
-ensure_daemon "${PORT}"
-PORT="$(read_port)"
-if post_say "${PORT}" "${PAYLOAD}"; then
-  log "post_say_done port=${PORT}"
+if grep -q '^hook_metrics ' "${PREP_ERR}" 2>/dev/null; then
+  log "$(grep '^hook_metrics ' "${PREP_ERR}" | tail -1 | tr -d '\r')"
+fi
+if grep -qE '^hook_metrics .*http=(202|200)' "${PREP_ERR}" 2>/dev/null; then
+  log "post_say_done port=${PORT} via=hook_run"
 else
-  log "post_say_failed_after_prepare port=${PORT}"
+  log "post_say_failed port=${PORT}"
 fi
 
 rm -f "${HOOK_STDIN}"

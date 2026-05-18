@@ -21,7 +21,8 @@ enabled = true
 port = 8765
 onnx_dir = "../assets/onnx"
 use_gpu = false
-mode = "queue"
+# interrupt = start new speech immediately (lower latency after each reply); queue = wait for prior line to finish
+mode = "interrupt"
 
 # --- Voice & speech ---
 # Voice preset id (M1, F2, … — whatever JSON files you have under assets/voice_styles/).
@@ -35,7 +36,7 @@ voice_style = ""
 # assistant reply is already in the same language. See only_speak_spoken_summary.
 lang = "en"
 # Playback speed: 1.0 is baseline; higher speaks faster (same meaning as CLI examples).
-speed = 1.0
+speed = 1.15
 # ONNX denoising steps (quality vs CPU). Upstream examples often use 8; 4 is faster but rougher.
 total_step = 4
 
@@ -47,7 +48,9 @@ min_chars = 5
 max_chars = 2000
 # Hard cap for <spoken_summary>…</spoken_summary> body only (default 360). Stops TTS from
 # reading an essay if the tag wraps most of the reply. Set to 0 to use max_chars for the tag.
-spoken_summary_max_chars = 360
+spoken_summary_max_chars = 280
+# Sentences inside <spoken_summary>: 0 = speak the full tag (only spoken_summary_max_chars). Set 1–2 to trim for shorter TTS.
+spoken_summary_max_sentences = 0
 # Max characters for sentence heuristics when there is no tag (default 480).
 heuristic_max_chars = 480
 # Last-resort plain excerpt cap (default 420).

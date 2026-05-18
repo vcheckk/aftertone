@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
+import time
+import urllib.error
+import urllib.request
 from datetime import datetime
-
-from expression_tags import apply_expression
 
 from aftertone.config import cfg_enabled, load_config, summary_mode
 from aftertone.extract import hook_event_name, resolve_raw_text
 from aftertone.hook_json import decode_hook_bytes, loads_hook_json
-from aftertone.paths import install_root
+from aftertone.paths import install_root, state_dir
 from aftertone.summary import build_speakable_text
 from aftertone.text_utils import cfg_float_bounded, cfg_int_bounded, in_quiet_hours
 
@@ -45,6 +47,15 @@ def prepare_payload(hook: dict, cfg: dict | None = None, root=None) -> dict | No
         return None
 
     mode = summary_mode(cfg)
+    expression_mode = str(cfg.get("expression_mode", "off")).lower()
+
+    def _apply_expression(text: str, flow_state: str | None, mode_name: str) -> str:
+        if expression_mode in ("", "off"):
+            return text
+        from expression_tags import apply_expression
+
+        return apply_expression(text, flow_state, mode_name)
+
     text, _source = build_speakable_text(
         raw_text,
         cfg,
@@ -54,7 +65,7 @@ def prepare_payload(hook: dict, cfg: dict | None = None, root=None) -> dict | No
         h_max=h_max,
         h_code_max=h_code_max,
         fence_thr=fence_thr,
-        apply_expression_fn=apply_expression,
+        apply_expression_fn=_apply_expression,
     )
     if not text:
         return None
@@ -70,7 +81,48 @@ def prepare_payload(hook: dict, cfg: dict | None = None, root=None) -> dict | No
     }
 
 
+def _daemon_port(repo) -> int:
+    cfg = load_config(repo)
+    port = int(cfg.get("port", 8765))
+    port_file = state_dir(repo) / "tts-daemon.port"
+    if port_file.is_file():
+        try:
+            port = int(port_file.read_text(encoding="utf-8").strip())
+        except ValueError:
+            pass
+    return port
+
+
+def post_say_payload(repo, payload: dict) -> tuple[int, int]:
+    """POST /say; returns (http_status, post_ms)."""
+    port = _daemon_port(repo)
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        f"http://127.0.0.1:{port}/say",
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    t0 = time.perf_counter()
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            status = resp.status
+    except urllib.error.URLError:
+        raise
+    post_ms = int((time.perf_counter() - t0) * 1000)
+    return status, post_ms
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Prepare hook JSON for /say")
+    parser.add_argument(
+        "--post",
+        action="store_true",
+        help="Prepare and POST in one process (faster hook on Windows)",
+    )
+    args = parser.parse_args()
+
+    t_prepare = time.perf_counter()
     raw_hook = decode_hook_bytes(sys.stdin.buffer.read())
     try:
         hook = loads_hook_json(raw_hook)
@@ -88,7 +140,27 @@ def main() -> None:
 
     cfg = load_config(root)
     out = prepare_payload(hook, cfg, root)
+    prepare_ms = int((time.perf_counter() - t_prepare) * 1000)
     if out is None:
         print("{}")
         return
     print(json.dumps(out, ensure_ascii=False))
+
+    if not args.post:
+        return
+
+    post_ms = 0
+    http_status = 0
+    try:
+        http_status, post_ms = post_say_payload(root, out)
+    except urllib.error.URLError as exc:
+        print(
+            f"hook_metrics prepare_ms={prepare_ms} post_ms=0 http=0 post_error={exc}",
+            file=sys.stderr,
+        )
+        return
+    print(
+        f"hook_metrics prepare_ms={prepare_ms} post_ms={post_ms} http={http_status} "
+        f"payload_chars={len(out.get('text', ''))}",
+        file=sys.stderr,
+    )

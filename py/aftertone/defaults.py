@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 def apply_install_defaults(toml_path: Path) -> None:
-    """Ensure fresh installs use tag_only + total_step 8 (matches repo speak_summary.toml)."""
+    """Fresh installs: tag_only, total_step 8, full spoken_summary tag (no sentence cap)."""
     if not toml_path.is_file():
         return
     text = toml_path.read_text(encoding="utf-8")
@@ -44,5 +44,16 @@ def apply_install_defaults(toml_path: Path) -> None:
         )
     else:
         text = text.rstrip() + "\nonly_speak_spoken_summary = true\n"
+
+    if re.search(r"^\s*spoken_summary_max_sentences\s*=", text, re.MULTILINE):
+        text = re.sub(
+            r"^(\s*)spoken_summary_max_sentences\s*=\s*\d+.*$",
+            r"\1spoken_summary_max_sentences = 0",
+            text,
+            count=1,
+            flags=re.MULTILINE,
+        )
+    else:
+        text = text.rstrip() + "\nspoken_summary_max_sentences = 0\n"
 
     toml_path.write_text(text, encoding="utf-8")

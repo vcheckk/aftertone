@@ -11,6 +11,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from aftertone.config import summary_mode
+from aftertone.defaults import apply_install_defaults
 from aftertone.hook_json import decode_hook_bytes, loads_hook_json
 from aftertone.prepare import prepare_payload
 from aftertone.summary import build_speakable_text
@@ -110,3 +111,58 @@ def test_prepare_skips_non_after_agent():
     hook = {"hook_event_name": "stop", "text": "done"}
     cfg = {"enabled": True, "summary_mode": "auto"}
     assert prepare_payload(hook, cfg) is None
+
+
+def test_wait_spoken_job_reads_jsonl(tmp_path):
+    from aftertone.cli import _find_spoken_job, _wait_spoken_job
+
+    spoken = tmp_path / ".cursor" / "hooks" / "state" / "spoken"
+    spoken.mkdir(parents=True)
+    from datetime import date
+
+    log = spoken / f"{date.today().isoformat()}.jsonl"
+    log.write_text(
+        json.dumps({"job_id": "other", "took_ms": 1}) + "\n",
+        encoding="utf-8",
+    )
+
+    repo = tmp_path
+
+    import aftertone.cli as cli_mod
+
+    orig = cli_mod._spoken_log_path
+    cli_mod._spoken_log_path = lambda r: log  # type: ignore[assignment]
+    try:
+        assert _find_spoken_job(repo, "missing") is None
+        log.write_text(
+            log.read_text(encoding="utf-8")
+            + json.dumps(
+                {
+                    "job_id": "abc",
+                    "first_audio_ms": 4200,
+                    "took_ms": 9000,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        rec = _wait_spoken_job(repo, "abc", timeout_sec=1.0)
+        assert rec is not None
+        assert rec["first_audio_ms"] == 4200
+    finally:
+        cli_mod._spoken_log_path = orig
+
+
+def test_apply_install_defaults_full_spoken_summary(tmp_path: Path) -> None:
+    toml = tmp_path / "speak_summary.toml"
+    toml.write_text(
+        "summary_mode = \"auto\"\n"
+        "total_step = 5\n"
+        "spoken_summary_max_sentences = 1\n",
+        encoding="utf-8",
+    )
+    apply_install_defaults(toml)
+    text = toml.read_text(encoding="utf-8")
+    assert 'summary_mode = "tag_only"' in text
+    assert "total_step = 8" in text
+    assert "spoken_summary_max_sentences = 0" in text

@@ -192,6 +192,23 @@ Put **one** `<spoken_summary>…</spoken_summary>` block at the **very end** of 
 
 For **vibe coding**, write a hybrid pair-programmer briefing: what happened, why it matters, optional next move. For livelier TTS, end **each sentence** in the tag with `!!`, `??`, `?!`, or `!?`. Full guidance: [`.cursor/rules/spoken-summary.mdc`](.cursor/rules/spoken-summary.mdc).
 
+## Spoken summary latency (Windows vs Linux / macOS)
+
+**Aftertone is not the whole story for “how long until I hear something?”** On **Linux and macOS**, the path from “agent finished typing” to “hook runs” is usually short. On **Windows**, many users see a **much longer gap** between the reply appearing in chat and the hook actually starting — even when Aftertone’s own hook script and daemon only take a few seconds once they run.
+
+That delay is **outside Aftertone**: [Cursor runs `afterAgentResponse` hooks on Windows with high scheduling and process-startup overhead](https://forum.cursor.com/t/hook-execution-reports-8-seconds-delay-despite-actual-execution-taking-only-5ms/147584). Cursor staff have [acknowledged the issue](https://forum.cursor.com/t/hook-execution-reports-8-seconds-delay-despite-actual-execution-taking-only-5ms/147584) and described work to reduce shell/process launch cost; we hope that improves in future Cursor releases.
+
+**What Aftertone controls:** preparing text, talking to `tts_daemon`, and ONNX synthesis/playback. **What we do not control:** when Cursor invokes the hook after the assistant message is done.
+
+If timing feels wrong:
+
+1. Run **`/aftertone-doctor`** or `uv run --directory py python -m aftertone doctor`.
+2. Inspect **`speak_summary-hook.log`** and **`pipeline_trace.jsonl`** under `.cursor/hooks/state/` — look for `hook_minus_transcript_mtime_ms` (gap before our hook) vs `first_sound_since_hook_ms` (our side after the hook starts).
+3. Compare on **Ubuntu or macOS** if you can — same project, same Cursor hooks.
+4. **Update Cursor** — newer builds include hook performance work; see the forum thread above.
+
+More detail: [docs — Windows hook latency](https://omarelkhal.github.io/aftertone/docs.html#windows-hook-latency).
+
 ## Configuration
 
 | Doc / file | Role |
