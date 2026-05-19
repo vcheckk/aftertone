@@ -13,12 +13,11 @@
   <a href="https://buymeacoffee.com/elkhalomar"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a coffee" width="217" height="60" /></a>
 </p>
 
-<p align="center">
-  <video src="https://raw.githubusercontent.com/omarelkhal/aftertone/main/docs/demo.mp4" controls width="720" playsinline poster="https://raw.githubusercontent.com/omarelkhal/aftertone/main/docs/demo-poster.svg">
-    <a href="https://raw.githubusercontent.com/omarelkhal/aftertone/main/docs/demo.mp4">Download demo (MP4)</a>
-  </video>
-</p>
-<p align="center"><sub>Claude Code with <code>/aftertone_on</code> — short question and clone-a-repo; hear the spoken summary when each reply finishes.</sub></p>
+<p align="center"><sub>Demo — Claude Code with <code>/aftertone_on</code> (short question + clone-a-repo). Unmute for audio.</sub></p>
+
+https://github.com/omarelkhal/aftertone/releases/download/demo-asset/demo.mp4
+
+<p align="center"><sub>Hear the spoken summary when each reply finishes — not the full reply on screen.</sub></p>
 
 ## Adapters
 
