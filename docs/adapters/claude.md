@@ -39,6 +39,12 @@ Aftertone speaks after each agent turn via **global user hooks** in `~/.claude/s
 
 3. Turn off: `/aftertone_off`
 
+### Per-chat on/off (multiple sessions)
+
+**`/aftertone_on`** and **`/aftertone_off`** apply to **this chat only**. Run `/aftertone_on` in each Claude (or Cursor) session where you want speech; other sessions stay silent.
+
+Send any reply after `/aftertone_on` so the **Stop** hook registers the session id. List or clear ids: `aftertone session list` / `aftertone session clear`. Mute everywhere: `aftertone global-off`.
+
 ### Why `/aftertone_on` is not like `/model`
 
 Built-in commands such as **`/model`**, **`/effort`**, and **`/fast`** are implemented **inside the Claude Code CLI**. They flip settings in the UI with **no model turn** and no token spend.
@@ -107,7 +113,7 @@ Install pre-approves the instant wrapper scripts in `~/.claude/settings.json` `p
 
 ## Control (CLI)
 
-- **CLI:** `cd ~/aftertone/py && uv run python -m aftertone {on|off|toggle|status|doctor|repair|restart}`
+- **CLI:** `cd ~/aftertone/py && uv run python -m aftertone {on|off|toggle|status|session list|global-off|doctor|repair|restart}`
 
 ## LLM backends
 

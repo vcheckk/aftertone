@@ -127,6 +127,90 @@ def test_resolve_raw_text_prefers_last_assistant_message():
     assert "last assistant message" in raw
 
 
+def test_session_allowlist_blocks_unlisted(tmp_path):
+    from aftertone.sessions import save_sessions
+
+    repo = tmp_path / "repo"
+    hooks = repo / ".cursor" / "hooks"
+    hooks.mkdir(parents=True)
+    (hooks / "speak_summary.toml").write_text(
+        'enabled = true\nsession_mode = "allowlist"\n',
+        encoding="utf-8",
+    )
+    save_sessions(repo, {"cursor": ["conv-allowed"], "claude": []})
+
+    hook = {
+        "hook_event_name": "afterAgentResponse",
+        "text": "Hello. <spoken_summary>Hi there!!</spoken_summary>",
+        "conversation_id": "conv-other",
+    }
+    cfg = {
+        "enabled": True,
+        "session_mode": "allowlist",
+        "summary_mode": "tag_only",
+        "only_speak_spoken_summary": True,
+        "min_chars": 5,
+        "max_chars": 2000,
+        "spoken_summary_max_chars": 360,
+        "expression_mode": "off",
+    }
+    assert prepare_payload(hook, cfg, repo) is None
+
+    hook["conversation_id"] = "conv-allowed"
+    out = prepare_payload(hook, cfg, repo)
+    assert out is not None
+    assert "Hi there" in out["text"]
+
+
+def test_cli_on_registers_session_allowlist(tmp_path):
+    from aftertone.cli import cmd_on
+    from argparse import Namespace
+    from aftertone.sessions import load_sessions
+
+    repo = tmp_path / "repo"
+    hooks = repo / ".cursor" / "hooks"
+    hooks.mkdir(parents=True)
+    (hooks / "speak_summary.toml").write_text("enabled = false\n", encoding="utf-8")
+    py_dir = repo / "py"
+    py_dir.mkdir(parents=True)
+    (py_dir / "speak_summary_prepare.py").write_text("# test\n", encoding="utf-8")
+
+    rc = cmd_on(Namespace(repo_root=repo))
+    assert rc == 0
+    text = (hooks / "speak_summary.toml").read_text(encoding="utf-8")
+    assert 'session_mode = "allowlist"' in text
+    assert "enabled = true" in text
+
+
+def test_pending_session_on_registers_id(tmp_path):
+    from aftertone.sessions import cmd_session_on, load_sessions
+
+    repo = tmp_path / "repo"
+    hooks = repo / ".cursor" / "hooks"
+    hooks.mkdir(parents=True)
+    (hooks / "speak_summary.toml").write_text("enabled = true\n", encoding="utf-8")
+    cmd_session_on(repo)
+
+    hook = {
+        "hook_event_name": "afterAgentResponse",
+        "text": "ok <spoken_summary>Registered!!</spoken_summary>",
+        "conversation_id": "conv-new",
+    }
+    cfg = {
+        "enabled": True,
+        "session_mode": "allowlist",
+        "summary_mode": "tag_only",
+        "only_speak_spoken_summary": True,
+        "min_chars": 5,
+        "max_chars": 2000,
+        "spoken_summary_max_chars": 360,
+        "expression_mode": "off",
+    }
+    out = prepare_payload(hook, cfg, repo)
+    assert out is not None
+    assert "conv-new" in load_sessions(repo)["cursor"]
+
+
 def test_prepare_accepts_claude_stop_event():
     hook = {
         "hook_event_name": "Stop",

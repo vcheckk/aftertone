@@ -17,6 +17,16 @@ from aftertone.config import cfg_enabled, load_config, summary_mode
 from aftertone.defaults import apply_install_defaults
 from aftertone.doctor import run_doctor
 from aftertone.paths import config_path, install_root, state_dir
+from aftertone.sessions import (
+    cmd_global_off,
+    cmd_session_clear,
+    cmd_session_list,
+    cmd_session_off,
+    cmd_session_on,
+    cmd_session_toggle,
+    load_sessions,
+    session_mode,
+)
 
 
 def _repo(explicit: Path | None) -> Path:
@@ -44,15 +54,15 @@ def _invoke(repo: Path, script: str, *args: str) -> int:
 
 
 def cmd_on(args: argparse.Namespace) -> int:
-    return _invoke(_repo(args.repo_root), "speak_summary_toggle.py", "on")
+    return cmd_session_on(_repo(args.repo_root))
 
 
 def cmd_off(args: argparse.Namespace) -> int:
-    return _invoke(_repo(args.repo_root), "speak_summary_toggle.py", "off")
+    return cmd_session_off(_repo(args.repo_root))
 
 
 def cmd_toggle(args: argparse.Namespace) -> int:
-    return _invoke(_repo(args.repo_root), "speak_summary_toggle.py", "toggle")
+    return cmd_session_toggle(_repo(args.repo_root))
 
 
 def cmd_status(args: argparse.Namespace) -> int:
@@ -76,6 +86,8 @@ def cmd_status(args: argparse.Namespace) -> int:
         json.dumps(
             {
                 "tts_enabled": cfg_enabled(cfg),
+                "session_mode": session_mode(cfg),
+                "enabled_sessions": load_sessions(repo),
                 "summary_mode": summary_mode(cfg),
                 "lang": cfg.get("lang", "en"),
                 "voice_type": cfg.get("voice_type", ""),
@@ -99,7 +111,10 @@ def cmd_repair(args: argparse.Namespace) -> int:
     rc = _invoke(repo, "install_global_hooks.py", "--install-dir", str(repo))
     if rc != 0:
         return rc
-    _invoke(repo, "speak_summary_toggle.py", "on")
+    from aftertone.sessions import set_enabled_toml, set_session_mode_toml
+
+    set_enabled_toml(repo, True)
+    set_session_mode_toml(repo, "allowlist")
     apply_install_defaults(config_path(repo))
     _invoke(repo, "sync_spoken_rule_lang.py")
     return cmd_restart(args)
@@ -331,15 +346,35 @@ def cmd_set_voice(args: argparse.Namespace) -> int:
     return _config(_repo(args.repo_root), "set", "voice", args.preset, *extra)
 
 
+def cmd_session_on_cli(args: argparse.Namespace) -> int:
+    return cmd_session_on(_repo(args.repo_root))
+
+
+def cmd_session_off_cli(args: argparse.Namespace) -> int:
+    return cmd_session_off(_repo(args.repo_root), args.session_id)
+
+
+def cmd_session_list_cli(args: argparse.Namespace) -> int:
+    return cmd_session_list(_repo(args.repo_root))
+
+
+def cmd_session_clear_cli(args: argparse.Namespace) -> int:
+    return cmd_session_clear(_repo(args.repo_root))
+
+
+def cmd_global_off_cli(args: argparse.Namespace) -> int:
+    return cmd_global_off(_repo(args.repo_root))
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="aftertone", description="Aftertone v2 CLI")
     parser.add_argument("--repo-root", type=Path, default=None, help="Install root")
     sub = parser.add_subparsers(dest="command", required=True)
 
     for name, fn, help_text in (
-        ("on", cmd_on, "Enable spoken TTS"),
-        ("off", cmd_off, "Disable spoken TTS"),
-        ("toggle", cmd_toggle, "Toggle spoken TTS"),
+        ("on", cmd_on, "Enable spoken TTS for this chat only"),
+        ("off", cmd_off, "Disable spoken TTS for this chat only"),
+        ("toggle", cmd_toggle, "Toggle spoken TTS for this chat"),
         ("status", cmd_status, "Show config and daemon status"),
         ("restart", cmd_restart, "Restart TTS daemon"),
         ("repair", cmd_repair, "Re-register hooks and set install defaults"),
@@ -409,6 +444,33 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_set_voice(ns)
 
     pv.set_defaults(func=cmd_set_voice_cli)
+
+    pg = sub.add_parser("global-off", help="Mute spoken TTS in all chats (enabled=false)")
+    pg.set_defaults(func=cmd_global_off_cli, session_id=None)
+
+    psess = sub.add_parser(
+        "session",
+        help="Aliases for on/off/list (same as top-level on/off)",
+    )
+    sess_sub = psess.add_subparsers(dest="session_cmd", required=True)
+
+    pso = sess_sub.add_parser("on", help="Same as: aftertone on")
+    pso.set_defaults(func=cmd_session_on_cli, session_id=None)
+
+    psf = sess_sub.add_parser("off", help="Same as: aftertone off")
+    psf.add_argument(
+        "--id",
+        dest="session_id",
+        default=None,
+        help="Remove a specific session id without waiting for the next hook",
+    )
+    psf.set_defaults(func=cmd_session_off_cli)
+
+    psl = sess_sub.add_parser("list", help="Show session_mode and allowlisted ids")
+    psl.set_defaults(func=cmd_session_list_cli, session_id=None)
+
+    psc = sess_sub.add_parser("clear", help="Clear all allowlisted session ids")
+    psc.set_defaults(func=cmd_session_clear_cli, session_id=None)
 
     args = parser.parse_args(argv)
     try:

@@ -42,7 +42,7 @@ Installs to `~/aftertone` (or `%USERPROFILE%\aftertone`), downloads models, regi
 | Tool | You do |
 |------|--------|
 | **Cursor** | Settings → **Hooks** on · **trust** the workspace |
-| **Claude Code** | `claude` → `/aftertone_on` in chat |
+| **Claude Code** | `claude` → `/aftertone_on` in each chat where you want speech |
 
 Agents should end substantive replies with `<spoken_summary>…</spoken_summary>` (repo default: **tag only** — no tag, no speech). See [spoken-summary rule](.cursor/rules/spoken-summary.mdc).
 
@@ -52,11 +52,18 @@ More options, uninstall, manual clone: **[docs](https://omarelkhal.github.io/aft
 
 Type `/` in Agent chat. **Do not** hand-edit TOML for everyday changes.
 
+### Per-session on/off
+
+**`/aftertone-on`** and **`/aftertone-off`** (Claude: `/aftertone_on` / `/aftertone_off`) apply to **this chat only**. Run **`/aftertone-on`** in each Composer or Claude session where you want speech; other sessions stay silent until you enable them there too. After **`/aftertone-on`**, send any agent reply so the hook can register that session.
+
 | Cursor | Claude Code |
 |--------|-------------|
-| `/aftertone-on` `/aftertone-off` `/aftertone-status` | `/aftertone_on` `/aftertone_off` `/aftertone_status` |
+| `/aftertone-on` `/aftertone-off` `/aftertone-toggle` | `/aftertone_on` `/aftertone_off` `/aftertone_toggle` |
+| `/aftertone-status` | `/aftertone_status` |
 | `/aftertone-lang` `/aftertone-voice` `/aftertone-restart` | `/aftertone_lang` `/aftertone_voice` `/aftertone_restart` |
-| … full list in [docs](https://omarelkhal.github.io/aftertone/docs.html#slash-commands) | … [Claude guide](docs/adapters/claude.md) |
+| … [docs](https://omarelkhal.github.io/aftertone/docs.html#slash-commands) | … [Claude guide](docs/adapters/claude.md) |
+
+Power-user: `aftertone session list`, `aftertone session clear`, `aftertone global-off` (mute everywhere).
 
 **CLI** (same as slash commands):
 

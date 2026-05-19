@@ -18,6 +18,8 @@
 #     cd py && uv run python tts_daemon_ctl.py restart --repo-root ..
 
 enabled = true
+# Session scope: /aftertone-on registers this chat only (allowlist). "all" = every chat when enabled.
+# session_mode = "allowlist" is set automatically by /aftertone-on.
 port = 8765
 onnx_dir = "../assets/onnx"
 use_gpu = false

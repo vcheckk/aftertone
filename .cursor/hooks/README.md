@@ -17,7 +17,7 @@ Use **Agent** chat slash commands in [`../commands/`](../commands/) — do **not
 
 | Command | Setting |
 |---------|---------|
-| `/aftertone-toggle`, `/aftertone-on`, `/aftertone-off` | `enabled` (no daemon restart) |
+| `/aftertone-on`, `/aftertone-off`, `/aftertone-toggle` | Spoken TTS **for this chat only** (`session_mode` allowlist + `state/enabled_sessions.json`) |
 | `/aftertone-lang` | `lang` + sync [spoken-summary rule](../rules/spoken-summary.mdc) |
 | `/aftertone-speed` | `speed` |
 | `/aftertone-mode` | `mode` (`queue` / `interrupt`) |

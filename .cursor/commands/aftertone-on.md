@@ -1,6 +1,6 @@
 ---
 name: aftertone-on
-description: Turn Aftertone spoken summary TTS on
+description: Turn Aftertone spoken TTS on for this chat only
 ---
 
 ## Agent rule
@@ -12,3 +12,5 @@ description: Turn Aftertone spoken summary TTS on
 ```
 uv run --directory py python -m aftertone on
 ```
+
+Enables spoken TTS **for this chat only**. Send any agent reply here to register the session. Run `/aftertone-on` again in **another** chat to enable speech there. Other chats stay silent.

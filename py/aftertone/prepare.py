@@ -13,6 +13,7 @@ from datetime import datetime
 
 from aftertone.config import cfg_enabled, load_config, summary_mode
 from aftertone.extract import hook_event_name, resolve_raw_text
+from aftertone.sessions import process_pending_from_hook, session_allows_speech
 from aftertone.hook_json import decode_hook_bytes, loads_hook_json
 from aftertone.paths import install_root, state_dir
 from aftertone.summary import build_speakable_text
@@ -25,8 +26,23 @@ _RESPONSE_HOOK_EVENTS = frozenset(
 
 
 def prepare_payload(hook: dict, cfg: dict | None = None, root=None) -> dict | None:
+    if root is None:
+        try:
+            root = install_root()
+        except FileNotFoundError:
+            root = None
+
     cfg = cfg if cfg is not None else load_config(root)
+
+    event = hook_event_name(hook)
+    if (not event or event in _RESPONSE_HOOK_EVENTS) and root is not None:
+        process_pending_from_hook(root, hook)
+
     if not cfg_enabled(cfg):
+        return None
+
+    allowed, _skip = session_allows_speech(cfg, hook, root)
+    if not allowed:
         return None
 
     quiet = str(cfg.get("quiet_hours", ""))
@@ -43,7 +59,6 @@ def prepare_payload(hook: dict, cfg: dict | None = None, root=None) -> dict | No
     h_code_max = cfg_int_bounded(cfg, "heuristic_max_sentences_code_heavy", 1, 1, 3)
     fence_thr = cfg_float_bounded(cfg, "heuristic_code_fence_fraction", 0.35, 0.05, 0.95)
 
-    event = hook_event_name(hook)
     if event and event not in _RESPONSE_HOOK_EVENTS:
         return None
 
