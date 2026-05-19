@@ -11,7 +11,7 @@
 #   --dry-run        Print actions without changing anything
 #   -h, --help
 #
-# Windows uninstall is not implemented in this script yet.
+# Windows uninstall: see scripts/uninstall.ps1 (irm one-liner or -File from clone).
 
 set -euo pipefail
 
@@ -41,7 +41,7 @@ require_linux() {
     Linux) ;;
     *)
       echo "uninstall: this script targets Linux only (detected: $(uname -s))." >&2
-      echo "  Windows uninstall is not shipped yet; see README § Uninstall." >&2
+      echo "  Windows: irm https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/uninstall.ps1 | iex" >&2
       exit 1
       ;;
   esac

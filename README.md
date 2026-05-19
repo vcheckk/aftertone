@@ -123,9 +123,11 @@ Optional flags (download script first, then invoke): `-NoStartDaemon`, `-NoGloba
 
 See [`scripts/install.sh`](scripts/install.sh), [`scripts/install.ps1`](scripts/install.ps1), and [`scripts/README.md`](scripts/README.md).
 
-### Uninstall (Linux)
+### Uninstall
 
-**Linux only** for now (Windows script coming later). Stops the daemon, removes **global** Cursor hooks and slash commands, and deletes the install directory (including large ONNX assets) unless you opt out.
+Stops the daemon, removes **global** Cursor hooks and slash commands, and deletes the install directory (including large ONNX assets) unless you opt out.
+
+**Linux / macOS:**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/uninstall.sh | bash
@@ -139,6 +141,22 @@ curl -fsSL .../uninstall.sh | bash -s -- --dir ~/code/aftertone --yes
 ```
 
 From an existing clone: `bash scripts/uninstall.sh` (same flags).
+
+**Windows (PowerShell):**
+
+```powershell
+irm https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/uninstall.ps1 | iex
+```
+
+Options:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\uninstall.ps1 -KeepDir
+powershell -ExecutionPolicy Bypass -File scripts\uninstall.ps1 -InstallDir D:\aftertone -Yes
+powershell -ExecutionPolicy Bypass -File scripts\uninstall.ps1 -DryRun
+```
+
+From an existing clone: `powershell -ExecutionPolicy Bypass -File scripts\uninstall.ps1` (same flags).
 
 **Mute without uninstalling:** `/aftertone-off` in Agent chat (or `speak_summary_toggle.py off`) — hooks stay registered; no speech when `only_speak_spoken_summary = true`.
 

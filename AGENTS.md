@@ -12,7 +12,7 @@
 ## Commands
 
 - One-line install: `curl -fsSL .../install.sh | bash -s -- --install-uv --start-daemon` → **`~/aftertone`** + **user hooks** in `~/.cursor/hooks.json` (default `--global`). Legacy per-project: `--no-global --into .`. See `scripts/install.sh`.
-- **Uninstall (Linux):** `curl -fsSL .../scripts/uninstall.sh | bash` or `bash scripts/uninstall.sh` — stops daemon, removes `~/.cursor` Aftertone hooks/commands/rule; deletes install dir unless `--keep-dir`. Windows script not shipped yet.
+- **Uninstall:** `curl -fsSL .../scripts/uninstall.sh | bash` or `bash scripts/uninstall.sh` (Linux); `irm .../scripts/uninstall.ps1 | iex` or `powershell -File scripts\uninstall.ps1` (Windows) — stops daemon, removes user `.cursor` Aftertone hooks/commands/rule; deletes install dir unless `--keep-dir` / `-KeepDir`.
 - Bootstrap: `bash scripts/bootstrap.sh` from repo root.
 - Daemon: `cd py && uv run python tts_daemon_ctl.py start --repo-root ..`
 - **User config:** slash `/aftertone-*` only ([`.cursor/commands/`](.cursor/commands/)). Agent runs **one** `python -m aftertone …` from the install root — no planning preamble, no bash `aftertone-root.sh`, no hand-edited TOML. **lang/speed/mode/voice** without a value: **AskQuestion** first; **voice** uses `aftertone set voice PRESET --ensure` (daemon restart is default).

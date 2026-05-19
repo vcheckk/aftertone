@@ -6,7 +6,7 @@ This folder holds the **Cursor hook** scripts, **`hooks.json`**, and **`speak_su
 
 One `curl | bash` install registers **user-level** hooks (`~/.cursor/hooks.json`) that call into your clone (default `~/aftertone`). You do **not** need `.cursor/` in every project. See [README § Global install layout](../../README.md#global-install-layout).
 
-**Uninstall (Linux):** [README § Uninstall](../../README.md#uninstall-linux) — `bash scripts/uninstall.sh` or the `curl | bash` one-liner. Removes global hooks and (by default) the install tree; use `--keep-dir` to keep `~/aftertone`. `/aftertone-off` only mutes speech.
+**Uninstall:** [README § Uninstall](../../README.md#uninstall) — Linux: `bash scripts/uninstall.sh` or `curl | bash`; Windows: `powershell -File scripts\uninstall.ps1` or `irm .../uninstall.ps1 | iex`. Removes global hooks and (by default) the install tree; use `--keep-dir` / `-KeepDir` to keep the clone. `/aftertone-off` only mutes speech.
 
 ---
 
