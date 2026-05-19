@@ -33,7 +33,7 @@
         <a href="docs.html">Docs</a>
         <a href="https://github.com/omarelkhal/aftertone">GitHub</a>
         <a href="#free">Free</a>
-        <a href="#demo">Demo</a>
+        <a href="#demo">Video</a>
         <a class="nav-cta" href="#install">Install</a>
       </nav>
     </div>
@@ -53,10 +53,33 @@
       <p class="hero-badge">Free · No API keys · Local · Open source</p>
       <h1>Hear a short line when your agent finishes</h1>
       <p class="lead">
-        <strong>Aftertone</strong> plays a brief spoken summary after each reply — on your machine, through a tiny
-        <strong>localhost daemon</strong> and <strong>Supertonic</strong> models. <strong>Nothing to pay</strong> for speech:
-        no cloud TTS API, no Aftertone subscription, no API keys to configure.
+        <strong>Aftertone</strong> plays a brief spoken summary after each reply — local
+        <strong>Supertonic</strong> ONNX, no cloud TTS API, no subscription.
       </p>
+
+      <div class="hero-demo" id="demo">
+        <div class="hero-demo-video-wrap">
+          <video
+            controls
+            playsinline
+            preload="metadata"
+            width="920"
+            aria-label="Aftertone demo: quick question and clone-repo task with local spoken summaries"
+          >
+            <source src="demo.mp4" type="video/mp4" />
+            <p>
+              Your browser does not support HTML5 video.
+              <a href="demo.mp4">Download the demo (MP4)</a>.
+            </p>
+          </video>
+        </div>
+        <p class="hero-demo-caption">
+          <strong>Short response</strong> — quick dev question ·
+          <strong>Long task</strong> — clone a repo, skim the README, hear the summary — you do not have to read everything.
+          Claude Code with <code>/aftertone_on</code>.
+        </p>
+      </div>
+
       <ul class="value-props" aria-label="Why Aftertone is free to run">
         <li><strong>$0</strong> — open source; optional donations only, not a paywall</li>
         <li><strong>No API keys</strong> — audio is synthesized on localhost only</li>
@@ -88,33 +111,6 @@
           <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a coffee" width="217" height="60" loading="lazy" />
         </a>
       </div>
-
-      <section class="demo-section" id="demo" aria-labelledby="demo-heading">
-        <div class="section-head">
-          <span class="pill">Demo</span>
-          <h2 id="demo-heading">Short answers and long tasks</h2>
-          <p>Claude Code with <code>/aftertone_on</code> — hear a spoken summary when each reply finishes. For long work, you do not have to read everything.</p>
-        </div>
-        <div class="demo-video-wrap">
-          <video
-            controls
-            playsinline
-            preload="metadata"
-            width="920"
-            aria-label="Aftertone demo: quick question and clone-repo task with local spoken summaries"
-          >
-            <source src="demo.mp4" type="video/mp4" />
-            <p>
-              Your browser does not support HTML5 video.
-              <a href="demo.mp4">Download the demo (MP4)</a>.
-            </p>
-          </video>
-        </div>
-        <p class="demo-caption">
-          <strong>Short response</strong> — a quick dev question ·
-          <strong>Long task</strong> — shallow-clone a repo, skim the README, listen for what it is about
-        </p>
-      </section>
 
       <div class="flow-strip flow-strip--linear" aria-label="How it works">
         <div class="flow-step">
