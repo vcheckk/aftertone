@@ -38,28 +38,19 @@ Short section: install `onnxruntime-gpu`, set `use_gpu = true` in `speak_summary
 
 ---
 
-## 3. Claude Code adapter — research (`help wanted`, `adapter`)
+## 3. Claude Code adapter — **shipped** (do not open as new work)
+
+**Status:** Closed on `main` in **9387bff** — global **Stop** hook, `/aftertone_*` slash commands, [`docs/adapters/claude.md`](../docs/adapters/claude.md). Daily flow: `install.sh` → `claude` → `/aftertone_on` per chat.
+
+**Optional follow-ups** (open separate issues if needed): MCP control plane, Claude Desktop, plugin-only installs.
+
+<details>
+<summary>Original starter text (historical)</summary>
 
 **Title:** `[adapter] Claude Code: capture final assistant text for TTS`
 
-**Body:**
-
-```markdown
-## Goal
-Design how to get the same JSON shape `speak_summary_prepare.py` expects (or POST directly to `/say`) from Claude Code after a reply completes.
-
-## Deliverable
-Links to official docs / events, proposed flow, and risks — PR can be docs-only for the first merge.
-
-## Checklist (see CONTRIBUTING.md § Claude Code — contributor todos)
-- [ ] Research hook / event API
-- [ ] Speech adapter → prepare or `/say`
-- [ ] Install root + `speak_summary.toml`
-- [ ] Spoken-summary guidance for models
-- [ ] Smoke test
-- [ ] (Optional) MCP: `aftertone.mcp_server` + CLI parity for on/off/status/set/restart
-- [ ] README “Claude setup” when proven
-```
+Research + Stop hook + prepare pipeline — all done. See CONTRIBUTING.md § Claude Code — contributor todos.
+</details>
 
 ---
 

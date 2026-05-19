@@ -25,10 +25,10 @@ Speech (required for “Aftertone works here”):
 
 - [x] **Research** — `Stop` + `transcript_path`; see [`docs/adapters/claude.md`](docs/adapters/claude.md).
 - [x] **Payload** — `Stop` accepted in `prepare.py`; plugin delegates to `speak_summary.sh` → `hook_run` / `/say`.
-- [x] **Install path** — [`claude-plugin/aftertone/bin/`](claude-plugin/aftertone/bin/) + `userConfig.install_dir` (default `~/aftertone`).
-- [ ] **Config** — Read `speak_summary.toml` from the install’s `.cursor/hooks/` (shared layout today) or document an adapter-specific path if Claude requires it.
-- [ ] **Model guidance** — Document `<spoken_summary>` + `summary_mode` / `lang` for agents (mirror [`.cursor/rules/spoken-summary.mdc`](.cursor/rules/spoken-summary.mdc)).
-- [ ] **Smoke test** — Script or doc steps: daemon up → hook fires → audio (reuse `py/test_speak_summary_pipeline.sh` patterns where possible).
+- [x] **Install path** — Global install (`install.sh` → `py/install_global_claude_hooks.py`, default `~/aftertone`); optional [`claude-plugin/aftertone/`](claude-plugin/aftertone/) for `--plugin-dir`.
+- [x] **Config** — Shared `speak_summary.toml` under install `.cursor/hooks/` (documented in [`docs/adapters/claude.md`](docs/adapters/claude.md)).
+- [x] **Model guidance** — `~/.claude/rules/spoken-summary.md` on install; mirrors Cursor spoken-summary rule (`lang` + `<spoken_summary>`).
+- [x] **Smoke test** — `bash py/test_speak_summary_pipeline.sh` + Claude steps in [`docs/adapters/claude.md`](docs/adapters/claude.md).
 
 Control (optional; same CLI as Cursor slash commands):
 
@@ -38,8 +38,8 @@ Control (optional; same CLI as Cursor slash commands):
 
 Docs / PR:
 
-- [ ] README adapter row + short “Claude setup” section when the hook path is proven.
-- [ ] First PR can be **docs-only** (design + links); follow-up PR ships the adapter script.
+- [x] README adapter row + Claude quickstart — [`docs/adapters/claude.md`](docs/adapters/claude.md), site docs, slash commands (`/aftertone_*`).
+- [x] Adapter shipped on `main` (global **Stop** hook + slash commands); follow-ups welcome for MCP and edge cases.
 
 ## OpenAI Codex — contributor todos
 
