@@ -110,10 +110,17 @@
       </p>
 
       <h3>Then in Cursor</h3>
-      <ul style="color: var(--muted); line-height: 1.75; margin-bottom: 2rem;">
+      <ul style="color: var(--muted); line-height: 1.75; margin-bottom: 1.25rem;">
         <li>Enable <strong>Hooks</strong> in Cursor Settings and <strong>trust</strong> each workspace where you want TTS.</li>
-        <li>Optional: open <code>~/aftertone</code> or <code>%USERPROFILE%\aftertone</code> and run <code>/aftertone-status</code> in Agent chat.</li>
-        <li>Ask the agent something — listen for one short line after the reply (daemon and TTS config are already on after install).</li>
+        <li>Optional: run <code>/aftertone-status</code> in Agent chat.</li>
+        <li>Ask the agent something — listen for one short line after the reply.</li>
+      </ul>
+
+      <h3>Then in Claude Code</h3>
+      <ul style="color: var(--muted); line-height: 1.75; margin-bottom: 2rem;">
+        <li>Run <code>claude</code> (no <code>--plugin-dir</code> required after global install).</li>
+        <li>In chat: <code>/aftertone_on</code> to enable speech for the session.</li>
+        <li>Substantive replies need a <code>&lt;spoken_summary&gt;</code> tag at the end — see <a href="#slash-claude">Claude slash commands</a>.</li>
       </ul>
 
       <details style="margin-bottom: 2rem;">
@@ -128,8 +135,11 @@
       </details>
 
 
-      <h2 id="slash-commands">Slash commands (Cursor)</h2>
-      <p>After a <strong>global install</strong>, slash commands work in <strong>any</strong> trusted workspace (commands live in <code>~/.cursor/commands/</code>). In <strong>Agent</strong> chat, type <code>/</code> and pick an <code>aftertone-</code> command. The agent runs <strong>one</strong> <code>python -m aftertone …</code> invocation from your install dir (<code>aftertone-install-dir</code>) — <strong>do not</strong> hand-edit <code>speak_summary.toml</code> for everyday changes.</p>
+      <h2 id="slash-commands">Slash commands</h2>
+      <p>After a <strong>global install</strong>, use slash commands in Cursor or Claude Code. In <strong>Agent</strong> chat, type <code>/</code> and pick an <code>aftertone-</code> (Cursor) or <code>aftertone_</code> (Claude) command. Each runs <strong>one</strong> <code>python -m aftertone …</code> from your install dir — <strong>do not</strong> hand-edit <code>speak_summary.toml</code> for everyday changes.</p>
+
+      <h3 id="slash-cursor">Cursor (hyphens)</h3>
+      <p>Commands live in <code>~/.cursor/commands/</code> and work in <strong>any</strong> trusted workspace.</p>
 
       <div class="table-wrap">
         <table>
@@ -158,6 +168,24 @@
       </div>
 
       <p>Command definitions: <a href="https://github.com/omarelkhal/aftertone/tree/main/.cursor/commands"><code>.cursor/commands/</code></a> on GitHub.</p>
+
+      <h3 id="slash-claude">Claude Code (underscores)</h3>
+      <p>Global install registers <strong>Stop</strong> hooks in <code>~/.claude/settings.json</code> and copies slash commands to <code>~/.claude/commands/</code>. After install: run <code>claude</code>, then <code>/aftertone_on</code> to enable speech for the session.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Command</th><th>What it does</th><th>Instant?</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>/aftertone_on</code> · <code>/aftertone_off</code></td><td>Enable or disable spoken TTS</td><td>Yes</td></tr>
+            <tr><td><code>/aftertone_toggle</code> · <code>/aftertone_status</code></td><td>Flip enabled · JSON status</td><td>Yes</td></tr>
+            <tr><td><code>/aftertone_restart</code> · <code>/aftertone_doctor</code> · <code>/aftertone_repair</code></td><td>Daemon · diagnostics · repair</td><td>Yes</td></tr>
+            <tr><td><code>/aftertone_lang</code> · <code>/aftertone_speed</code> · <code>/aftertone_mode</code></td><td>Language · speed · queue mode</td><td>Picker</td></tr>
+            <tr><td><code>/aftertone_voice</code> · <code>/aftertone_expression</code></td><td>Voice (restarts daemon) · expression tags</td><td>Picker</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Guide on GitHub: <a href="https://github.com/omarelkhal/aftertone/blob/main/docs/adapters/claude.md">docs/adapters/claude.md</a> · command sources <a href="https://github.com/omarelkhal/aftertone/tree/main/claude-plugin/aftertone/commands"><code>claude-plugin/aftertone/commands/</code></a></p>
 
       <h2 id="cli">Aftertone CLI (v2)</h2>
       <p>From your install root (path in <code>~/.cursor/hooks/aftertone-install-dir</code> or <code>%USERPROFILE%\.cursor\hooks\aftertone-install-dir</code>):</p>

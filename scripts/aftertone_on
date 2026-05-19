@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Start Claude Code with the Aftertone plugin (local TTS on Stop).
+# Usage: aftertone_on [claude args...]
+# Install: install.sh links this to ~/.local/bin/aftertone_on
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT=""
+if ROOT="$(bash "${SCRIPT_DIR}/aftertone-root.sh" 2>/dev/null)"; then
+  :
+elif [[ -f "${SCRIPT_DIR}/../py/speak_summary_prepare.py" ]]; then
+  ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+else
+  echo "aftertone_on: Aftertone not installed. Run:" >&2
+  echo "  curl -fsSL https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.sh | bash -s -- --install-uv --start-daemon" >&2
+  exit 1
+fi
+
+PLUGIN="${AFTERTONE_CLAUDE_PLUGIN_DIR:-${ROOT}/claude-plugin/aftertone}"
+if [[ ! -f "${PLUGIN}/.claude-plugin/plugin.json" ]]; then
+  echo "aftertone_on: Claude plugin not found at ${PLUGIN}" >&2
+  echo "  Set AFTERTONE_CLAUDE_PLUGIN_DIR or install from a full Aftertone tree." >&2
+  exit 1
+fi
+
+if ! command -v claude >/dev/null 2>&1; then
+  echo "aftertone_on: claude not in PATH. Install Claude Code:" >&2
+  echo "  https://code.claude.com/docs/en/quickstart" >&2
+  exit 1
+fi
+
+export AFTERTONE_REPO="${ROOT}"
+export AFTERTONE_INSTALL_DIR="${ROOT}"
+export SUPERTONIC_REPO="${ROOT}"
+
+# Best-effort: daemon up + TTS enabled (do not block launch on failure).
+_ensure_runtime() {
+  local port=8765
+  local toml="${ROOT}/.cursor/hooks/speak_summary.toml"
+  local port_file="${ROOT}/.cursor/hooks/state/tts-daemon.port"
+  if [[ -f "${port_file}" ]]; then
+    port="$(tr -d ' \n\r' <"${port_file}")"
+  elif [[ -f "${toml}" ]]; then
+    port="$(grep -E '^[[:space:]]*port[[:space:]]*=' "${toml}" | head -1 | sed -E 's/.*=[[:space:]]*//' | tr -d ' \"')"
+  fi
+  if curl -fsS -m 0.5 "http://127.0.0.1:${port}/healthz" >/dev/null 2>&1; then
+    return 0
+  fi
+  if command -v uv >/dev/null 2>&1 && [[ -d "${ROOT}/py" ]]; then
+    echo "aftertone_on: starting TTS daemon…" >&2
+    (cd "${ROOT}/py" && uv run python tts_daemon_ctl.py start --repo-root ..) >/dev/null 2>&1 || true
+  fi
+  if command -v uv >/dev/null 2>&1 && [[ -d "${ROOT}/py" ]]; then
+    (cd "${ROOT}/py" && uv run python -m aftertone on) >/dev/null 2>&1 || true
+  fi
+}
+
+_ensure_runtime
+
+echo "aftertone_on: Claude Code + Aftertone plugin (install: ${ROOT})" >&2
+echo "aftertone_on: first enable → set plugin install_dir to ${ROOT}" >&2
+
+exec claude --plugin-dir "${PLUGIN}" "$@"

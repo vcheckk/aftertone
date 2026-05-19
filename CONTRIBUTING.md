@@ -12,7 +12,7 @@ Thanks for helping make **local, private “hear the gist”** work across more 
 | Area | Status | Help wanted |
 |------|--------|-------------|
 | **Cursor** `afterAgentResponse` + `tts_daemon` | Shipped | Bugfixes, docs, Windows audio edge cases |
-| **Claude Code** (or Claude Desktop hooks) | Not shipped | [Contributor todos — Claude](#claude-code-contributor-todos) |
+| **Claude Code** (`Stop` hook + slash commands) | Shipped — [docs/adapters/claude.md](docs/adapters/claude.md) | [Contributor todos — Claude](#claude-code-contributor-todos) |
 | **OpenAI Codex** (CLI / IDE) | Not shipped | [Contributor todos — Codex](#openai-codex-contributor-todos) |
 | **OpenCode**, **GitHub Copilot**, **Windsurf**, **JetBrains AI**, **Zed**, **Cline**, **Continue** | Not shipped | Same pattern: final assistant text → `speak_summary_prepare.py` or `POST /say` |
 | **Core** daemon + ONNX pipeline | Shipped | Performance, GPU docs, packaging |
@@ -23,9 +23,9 @@ Optional **MCP control plane** (on/off, status, `set`, restart) lives in `py/aft
 
 Speech (required for “Aftertone works here”):
 
-- [ ] **Research** — Document Claude Code / Claude Desktop hook or event APIs for “assistant turn finished” (links in an issue or `docs/adapters/claude.md`).
-- [ ] **Payload** — Pipe final assistant text (or equivalent JSON) into `speak_summary_prepare.py` stdin, or `POST` prepared text to `tts_daemon` `/say` with the same fields the Cursor hook uses.
-- [ ] **Install path** — Thin shell/script under a repo or user config dir; resolve install root like Cursor (`AFTERTONE_INSTALL_DIR` / install-dir marker file).
+- [x] **Research** — `Stop` + `transcript_path`; see [`docs/adapters/claude.md`](docs/adapters/claude.md).
+- [x] **Payload** — `Stop` accepted in `prepare.py`; plugin delegates to `speak_summary.sh` → `hook_run` / `/say`.
+- [x] **Install path** — [`claude-plugin/aftertone/bin/`](claude-plugin/aftertone/bin/) + `userConfig.install_dir` (default `~/aftertone`).
 - [ ] **Config** — Read `speak_summary.toml` from the install’s `.cursor/hooks/` (shared layout today) or document an adapter-specific path if Claude requires it.
 - [ ] **Model guidance** — Document `<spoken_summary>` + `summary_mode` / `lang` for agents (mirror [`.cursor/rules/spoken-summary.mdc`](.cursor/rules/spoken-summary.mdc)).
 - [ ] **Smoke test** — Script or doc steps: daemon up → hook fires → audio (reuse `py/test_speak_summary_pipeline.sh` patterns where possible).

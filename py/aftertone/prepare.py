@@ -18,6 +18,11 @@ from aftertone.paths import install_root, state_dir
 from aftertone.summary import build_speakable_text
 from aftertone.text_utils import cfg_float_bounded, cfg_int_bounded, in_quiet_hours
 
+# Post-response hook events that may carry assistant text (Cursor vs Claude Code).
+_RESPONSE_HOOK_EVENTS = frozenset(
+    {"afterAgentResponse", "Stop", "SubagentStop"}
+)
+
 
 def prepare_payload(hook: dict, cfg: dict | None = None, root=None) -> dict | None:
     cfg = cfg if cfg is not None else load_config(root)
@@ -39,10 +44,10 @@ def prepare_payload(hook: dict, cfg: dict | None = None, root=None) -> dict | No
     fence_thr = cfg_float_bounded(cfg, "heuristic_code_fence_fraction", 0.35, 0.05, 0.95)
 
     event = hook_event_name(hook)
-    if event and event != "afterAgentResponse":
+    if event and event not in _RESPONSE_HOOK_EVENTS:
         return None
 
-    raw_text = resolve_raw_text(hook, event)
+    raw_text = resolve_raw_text(hook, event or "afterAgentResponse")
     if not raw_text:
         return None
 

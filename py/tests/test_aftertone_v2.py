@@ -107,10 +107,47 @@ def test_prepare_payload_after_agent_response():
     assert len(out["text"]) >= 5
 
 
-def test_prepare_skips_non_after_agent():
-    hook = {"hook_event_name": "stop", "text": "done"}
+def test_prepare_skips_unrelated_hook_events():
+    hook = {"hook_event_name": "UserPromptSubmit", "text": "hello"}
     cfg = {"enabled": True, "summary_mode": "auto"}
     assert prepare_payload(hook, cfg) is None
+
+
+def test_resolve_raw_text_prefers_last_assistant_message():
+    from aftertone.extract import resolve_raw_text
+
+    hook = {
+        "hook_event_name": "Stop",
+        "last_assistant_message": (
+            "<spoken_summary>Spoken from last assistant message!!</spoken_summary>"
+        ),
+        "transcript_path": "/nonexistent/transcript.jsonl",
+    }
+    raw = resolve_raw_text(hook, "Stop")
+    assert "last assistant message" in raw
+
+
+def test_prepare_accepts_claude_stop_event():
+    hook = {
+        "hook_event_name": "Stop",
+        "last_assistant_message": (
+            "Done.\n\n<spoken_summary>\n"
+            "The Claude Stop hook path is wired for speech!!\n"
+            "</spoken_summary>"
+        ),
+    }
+    cfg = {
+        "enabled": True,
+        "summary_mode": "tag_only",
+        "only_speak_spoken_summary": True,
+        "min_chars": 5,
+        "max_chars": 2000,
+        "spoken_summary_max_chars": 360,
+        "expression_mode": "off",
+    }
+    out = prepare_payload(hook, cfg)
+    assert out is not None
+    assert "Claude Stop" in out["text"]
 
 
 def test_wait_spoken_job_reads_jsonl(tmp_path):

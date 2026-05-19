@@ -96,14 +96,27 @@ PORT="$(read_port)"
 PAYLOAD=""
 : >"${PREP_ERR}"
 export PYTHONPATH="${PY}${PYTHONPATH:+:${PYTHONPATH}}"
+HOOK_RUN_OK=0
 if vpy="$(aftertone_venv_python "${PY}")"; then
-  PAYLOAD="$("${vpy}" -m aftertone.hook_run "${HOOK_STDIN}" 2>>"${PREP_ERR}" || true)"
+  if <"${HOOK_STDIN}" "${vpy}" -m aftertone.hook_run --stdin 2>>"${PREP_ERR}"; then
+    HOOK_RUN_OK=1
+  fi
 elif command -v uv >/dev/null 2>&1; then
-  PAYLOAD="$(cd "${PY}" && uv run python -m aftertone.hook_run "${HOOK_STDIN}" 2>>"${PREP_ERR}" || true)"
+  if <"${HOOK_STDIN}" bash -c "cd \"${PY}\" && uv run python -m aftertone.hook_run --stdin" 2>>"${PREP_ERR}"; then
+    HOOK_RUN_OK=1
+  fi
+fi
+if [[ "${HOOK_RUN_OK}" -eq 1 ]]; then
+  log "hook_run_ok (speech queued via daemon /hook)"
+  rm -f "${HOOK_STDIN}"
+  exit 0
 fi
 # Fallback if hook_run failed (e.g. import error): legacy prepare + post.
-if [[ "${PAYLOAD}" != "{"* ]] && vpy="$(aftertone_venv_python "${PY}")"; then
+PAYLOAD=""
+if vpy="$(aftertone_venv_python "${PY}")"; then
   PAYLOAD="$(<"${HOOK_STDIN}" "${vpy}" "${PY}/speak_summary_prepare.py" --post 2>>"${PREP_ERR}" || true)"
+elif command -v uv >/dev/null 2>&1; then
+  PAYLOAD="$(<"${HOOK_STDIN}" bash -c "cd \"${PY}\" && uv run python speak_summary_prepare.py --post" 2>>"${PREP_ERR}" || true)"
 fi
 
 PAYLOAD="$(echo "${PAYLOAD}" | tr -d '\n\r' | head -c 8000)"

@@ -173,6 +173,15 @@ def install_global(*, install_dir: Path, dry_run: bool = False) -> None:
     if sys.platform == "win32" and has_aftertone:
         print(f"Windows command: {win_cmd}")
 
+    try:
+        from install_global_claude_hooks import install_global_claude
+
+        install_global_claude(install_dir=install_dir, dry_run=dry_run)
+    except SystemExit as exc:
+        print(f"Claude Code hooks: skipped ({exc})", file=sys.stderr)
+    except Exception as exc:
+        print(f"Claude Code hooks: skipped ({exc})", file=sys.stderr)
+
 
 def main() -> None:
     p = argparse.ArgumentParser(description="Install Aftertone user-level Cursor hooks.")

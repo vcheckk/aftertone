@@ -1,0 +1,43 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash __AFTERTONE_CLAUDE_STOP__",
+            "timeout": 120,
+            "async": true,
+            "statusMessage": "Aftertone"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash __AFTERTONE_CLAUDE_STOP__",
+            "timeout": 120,
+            "async": true,
+            "statusMessage": "Aftertone"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash __AFTERTONE_CLAUDE_DOCTOR__",
+            "timeout": 12,
+            "once": true
+          }
+        ]
+      }
+    ]
+  }
+}

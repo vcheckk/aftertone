@@ -1,0 +1,43 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/bin/speak-on-stop.sh",
+            "timeout": 120,
+            "async": true,
+            "statusMessage": "Aftertone"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/bin/speak-on-stop.sh",
+            "timeout": 120,
+            "async": true,
+            "statusMessage": "Aftertone"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/bin/doctor-quiet.sh",
+            "timeout": 12,
+            "once": true
+          }
+        ]
+      }
+    ]
+  }
+}

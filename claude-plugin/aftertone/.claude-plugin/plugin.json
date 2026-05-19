@@ -1,0 +1,23 @@
+{
+  "name": "aftertone",
+  "displayName": "Aftertone",
+  "version": "0.1.0",
+  "description": "Local post-reply TTS for Claude Code via Supertonic (Stop hook + spoken_summary).",
+  "author": {
+    "name": "Omar El Khal",
+    "url": "https://github.com/omarelkhal/aftertone"
+  },
+  "homepage": "https://github.com/omarelkhal/aftertone",
+  "repository": "https://github.com/omarelkhal/aftertone",
+  "license": "MIT",
+  "keywords": ["tts", "speech", "supertonic", "accessibility"],
+  "userConfig": {
+    "install_dir": {
+      "type": "directory",
+      "title": "Aftertone install directory",
+      "description": "Folder from scripts/install.sh (default ~/aftertone). Must contain py/ and .cursor/hooks/speak_summary.sh.",
+      "default": "~/aftertone",
+      "required": true
+    }
+  }
+}

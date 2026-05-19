@@ -16,6 +16,7 @@ Optional: `--repo-root /abs/path/to/repo` if you run from another cwd.
 from __future__ import annotations
 
 import argparse
+import shutil
 import sys
 from pathlib import Path
 
@@ -47,6 +48,26 @@ def _blurb(lang: str) -> str:
     )
 
 
+def _blurb_claude(lang: str) -> str:
+    return (
+        f"> **Active `lang` for `<spoken_summary>`:** `{lang}` "
+        "(from `~/aftertone/.cursor/hooks/speak_summary.toml` on global install). "
+        "Write **only** the inner tag text in the natural language for that code. "
+        "After changing `lang`, run `/aftertone-lang` or "
+        "`uv run --directory py python sync_spoken_rule_lang.py` from the Aftertone repo.\n"
+    )
+
+
+def _replace_lang_block(body: str, blurb: str) -> tuple[str, bool]:
+    if MARK_START not in body or MARK_END not in body:
+        return body, False
+    before, rest = body.split(MARK_START, 1)
+    _mid, after = rest.split(MARK_END, 1)
+    new_block = MARK_START + blurb + MARK_END
+    new_body = before + new_block + after
+    return new_body, new_body != body
+
+
 def sync_rule(repo: Path, *, check_only: bool) -> int:
     toml_path = repo / ".cursor" / "hooks" / "speak_summary.toml"
     mdc_path = repo / ".cursor" / "rules" / "spoken-summary.mdc"
@@ -67,14 +88,34 @@ def sync_rule(repo: Path, *, check_only: bool) -> int:
         )
         return 2
 
-    before, rest = body.split(MARK_START, 1)
-    _mid, after = rest.split(MARK_END, 1)
-    new_block = MARK_START + _blurb(lang) + MARK_END
-    new_body = before + new_block + after
+    new_body, changed = _replace_lang_block(body, _blurb(lang))
 
-    if new_body == body:
+    claude_rule_src = repo / "scripts" / "claude-global" / "spoken-summary.md"
+    claude_changed = False
+    if claude_rule_src.is_file():
+        claude_body = claude_rule_src.read_text(encoding="utf-8")
+        if MARK_START in claude_body and MARK_END in claude_body:
+            claude_new, claude_changed = _replace_lang_block(
+                claude_body, _blurb_claude(lang)
+            )
+            if claude_changed and not check_only:
+                claude_rule_src.write_text(claude_new, encoding="utf-8")
+                print(f"updated {claude_rule_src} (lang={lang})")
+        elif not check_only:
+            print(f"warn: skip {claude_rule_src} (no lang markers)", file=sys.stderr)
+
+    if claude_rule_src.is_file() and not check_only:
+        for dest in (
+            Path.home() / ".claude" / "rules" / "spoken-summary.md",
+            repo / ".claude" / "rules" / "spoken-summary.md",
+        ):
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(claude_rule_src, dest)
+            print(f"updated {dest}")
+
+    if not changed and not claude_changed:
         if check_only:
-            print("ok: rule already matches TOML")
+            print("ok: rules already match TOML")
         else:
             print(f"ok: already synced (lang={lang})")
         return 0

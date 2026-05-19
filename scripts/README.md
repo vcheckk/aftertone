@@ -10,6 +10,7 @@
 | **`bootstrap.ps1`** | Windows | Same as `bootstrap.sh` (no bash required) |
 | **`repair-windows-hooks.ps1`** | Windows | Re-register global hooks, enable TTS, remove clashing project `hooks.json` |
 | **`aftertone-root.sh`** | all (bash) | Resolve install path; copied to `~/.cursor/hooks/` by install |
+| **`aftertone_on`** | Linux / macOS | Start Claude Code with the Aftertone plugin (`~/.local/bin/aftertone_on` after install) |
 | **`cursor-global/`** | all | Templates for `install_global_hooks.py` (`.cmd` + `hooks.windows.json`) |
 
 ## Aftertone v2 CLI

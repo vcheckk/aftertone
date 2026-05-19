@@ -172,6 +172,30 @@ sync_spoken_summary_rule() {
   cp "${root}/.cursor/rules/spoken-summary.mdc" "${HOME}/.cursor/rules/spoken-summary.mdc"
 }
 
+install_claude_commands() {
+  local root="$1"
+  local src_dir="${root}/claude-plugin/aftertone/commands"
+  local dest_dir="${HOME}/.claude/commands"
+  if [[ ! -d "${src_dir}" ]]; then
+    echo "install: skip Claude slash commands (missing ${src_dir})" >&2
+    return 0
+  fi
+  mkdir -p "${dest_dir}"
+  local f
+  for f in "${src_dir}"/aftertone_*.md; do
+    [[ -f "${f}" ]] || continue
+    local base
+    base="$(basename "${f}")"
+    cp "${f}" "${dest_dir}/${base}"
+    echo "==> install: Claude command → /${base%.md} (${dest_dir}/${base})"
+  done
+}
+
+install_claude_user_commands() {
+  local root="$1"
+  install_claude_commands "${root}" || true
+}
+
 install_global_hooks() {
   local root="$1"
   local vpy=""
@@ -245,8 +269,9 @@ Next:
   2. Trust each workspace where you want TTS (or your usual projects if global hooks are on)
   3. Daemon: cd ${root}/py && uv run python tts_daemon_ctl.py start --repo-root ..
   4. Turn on TTS: open ${root} and use /aftertone-on — or: uv run --directory ${root}/py python speak_summary_toggle.py on
+  5. Claude Code: run \`claude\`, then in chat \`/aftertone_on\` (hooks in ~/.claude/settings.json from install)
 
-Docs: ${root}/README.md  ·  hooks: ${root}/.cursor/hooks/README.md
+Docs: ${root}/README.md  ·  hooks: ${root}/.cursor/hooks/README.md  ·  Claude: ${root}/docs/adapters/claude.md
 EOF
 }
 
@@ -257,6 +282,7 @@ main() {
 
   if [[ "${GLOBAL_HOOKS}" == "1" ]]; then
     install_global_hooks "${INSTALL_DIR}" || true
+    install_claude_user_commands "${INSTALL_DIR}" || true
     enable_spoken_tts "${INSTALL_DIR}" || true
     sync_spoken_summary_rule "${INSTALL_DIR}" || true
   fi

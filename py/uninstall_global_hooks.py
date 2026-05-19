@@ -9,7 +9,8 @@ import shutil
 import time
 from pathlib import Path
 
-from install_global_hooks import _strip_aftertone_entries
+from install_global_claude_hooks import _strip_aftertone_entries as _strip_claude_entries
+from install_global_hooks import _strip_aftertone_entries as _strip_cursor_entries
 
 
 def _count_aftertone_commands(hooks: dict) -> int:
@@ -30,7 +31,31 @@ def _remove_aftertone_hook_entries(hooks_data: dict) -> tuple[dict, int]:
     out = dict(hooks_data)
     hooks = dict(out.get("hooks") or {})
     removed = _count_aftertone_commands(hooks)
-    out["hooks"] = _strip_aftertone_entries(hooks)
+    out["hooks"] = _strip_cursor_entries(hooks)
+    return out, removed
+
+
+def _count_claude_aftertone(hooks: dict) -> int:
+    n = 0
+    for entries in hooks.values():
+        if not isinstance(entries, list):
+            continue
+        for group in entries:
+            if not isinstance(group, dict):
+                continue
+            for h in group.get("hooks") or []:
+                if isinstance(h, dict) and "aftertone-claude-speak-on-stop" in (
+                    h.get("command") or ""
+                ):
+                    n += 1
+    return n
+
+
+def _remove_claude_hook_entries(settings: dict) -> tuple[dict, int]:
+    out = dict(settings)
+    hooks = dict(out.get("hooks") or {})
+    removed = _count_claude_aftertone(hooks)
+    out["hooks"] = _strip_claude_entries(hooks)
     return out, removed
 
 
@@ -39,14 +64,32 @@ def uninstall_global(*, dry_run: bool = False) -> None:
     user_hooks = user_cursor / "hooks"
     user_hooks_json = user_cursor / "hooks.json"
 
+    user_claude = Path.home() / ".claude"
+    claude_settings = user_claude / "settings.json"
+    claude_skill = user_claude / "skills" / "spoken-summary" / "SKILL.md"
+    claude_rule = user_claude / "rules" / "spoken-summary.md"
+
     hook_files = [
         user_hooks / "aftertone-install-dir",
         user_hooks / "aftertone-speak_summary.sh",
         user_hooks / "aftertone-speak_summary.cmd",
         user_hooks / "aftertone-root.sh",
+        user_hooks / "aftertone-claude-speak-on-stop.sh",
+        user_hooks / "aftertone-claude-doctor-quiet.sh",
+        user_hooks / "aftertone-activate.sh",
+        user_hooks / "aftertone-off.sh",
+        user_hooks / "aftertone-status.sh",
+        user_hooks / "aftertone-toggle.sh",
+        user_hooks / "aftertone-restart.sh",
+        user_hooks / "aftertone-doctor.sh",
+        user_hooks / "aftertone-repair.sh",
+        user_hooks / "_aftertone_common.sh",
     ]
     command_glob = "aftertone-*.md"
+    claude_user_commands = user_claude / "commands"
+    claude_slash_glob = "aftertone_*.md"
     rule_file = user_cursor / "rules" / "spoken-summary.mdc"
+    claude_cli = Path.home() / ".local" / "bin" / "aftertone_on"
 
     if dry_run:
         print(f"would remove hook files under {user_hooks} (aftertone-*)")
@@ -57,6 +100,17 @@ def uninstall_global(*, dry_run: bool = False) -> None:
             print(f"would remove {cmds}/{command_glob}")
         if rule_file.is_file():
             print(f"would remove {rule_file}")
+        if claude_cli.exists() or claude_cli.is_symlink():
+            print(f"would remove {claude_cli}")
+        if claude_user_commands.is_dir():
+            for p in sorted(claude_user_commands.glob(claude_slash_glob)):
+                print(f"would remove {p}")
+        if claude_settings.is_file():
+            print(f"would strip Aftertone from {claude_settings}")
+        if claude_skill.is_file():
+            print(f"would remove {claude_skill}")
+        if claude_rule.is_file():
+            print(f"would remove {claude_rule}")
         return
 
     user_hooks_json_exists = user_hooks_json.is_file()
@@ -89,6 +143,42 @@ def uninstall_global(*, dry_run: bool = False) -> None:
     if rule_file.is_file():
         rule_file.unlink()
         print(f"removed: {rule_file}")
+
+    if claude_cli.exists() or claude_cli.is_symlink():
+        claude_cli.unlink()
+        print(f"removed: {claude_cli}")
+
+    if claude_user_commands.is_dir():
+        for p in sorted(claude_user_commands.glob(claude_slash_glob)):
+            if p.is_file():
+                p.unlink()
+                print(f"removed: {p}")
+
+    removed_claude = 0
+    if claude_settings.is_file():
+        existing = json.loads(claude_settings.read_text(encoding="utf-8"))
+        updated, removed_claude = _remove_claude_hook_entries(existing)
+        if removed_claude:
+            backup = claude_settings.with_suffix(f".json.bak.{int(time.time())}")
+            shutil.copy2(claude_settings, backup)
+            if updated.get("hooks"):
+                claude_settings.write_text(
+                    json.dumps(updated, indent=2) + "\n", encoding="utf-8"
+                )
+            else:
+                claude_settings.unlink()
+            print(f"backup: {backup}")
+            print(
+                f"removed {removed_claude} Claude Stop hook(s) from {claude_settings}"
+            )
+
+    if claude_skill.is_file():
+        claude_skill.unlink()
+        print(f"removed: {claude_skill}")
+
+    if claude_rule.is_file():
+        claude_rule.unlink()
+        print(f"removed: {claude_rule}")
 
     if removed_hooks:
         print(f"removed {removed_hooks} afterAgentResponse hook(s) from {user_hooks_json}")

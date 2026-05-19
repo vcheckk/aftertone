@@ -18,7 +18,7 @@
 
 > **Note:** Your **coding agent** (Cursor, Claude, etc.) may have its own plan or API keys — that is separate from Aftertone, which only adds **local** speech after each reply.
 
-One daemon, thin adapters per tool — **Cursor ships today**; **Claude Code**, **Codex**, and **OpenCode** are on the roadmap. Want to help? See [CONTRIBUTING.md](CONTRIBUTING.md) and the **Adapter research** issue template.
+One daemon, thin adapters per tool — **Cursor** and **Claude Code** ship today; **Codex** and **OpenCode** are on the roadmap. Want to help? See [CONTRIBUTING.md](CONTRIBUTING.md) and the **Adapter research** issue template.
 
 <p align="center">
   <a href="https://buymeacoffee.com/elkhalomar"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy me a coffee" width="217" height="60" /></a>
@@ -40,9 +40,9 @@ One daemon, thin adapters per tool — **Cursor ships today**; **Claude Code**, 
         <sub>✅ Available</sub>
       </td>
       <td align="center" width="140">
-        <a href="https://docs.anthropic.com/en/docs/claude-code" title="Claude Code"><img src="img/adapters/claude.svg" alt="Claude Code" height="44" style="opacity:0.55" /></a><br>
+        <a href="https://docs.anthropic.com/en/docs/claude-code" title="Claude Code"><img src="img/adapters/claude.svg" alt="Claude Code" height="44" /></a><br>
         <strong>Claude Code</strong><br>
-        <sub>Coming soon</sub>
+        <sub>✅ Available</sub>
       </td>
       <td align="center" width="140">
         <a href="https://developers.openai.com/codex" title="OpenAI Codex"><img src="img/adapters/codex.svg" alt="Codex" height="44" style="opacity:0.55" /></a><br>
@@ -71,9 +71,10 @@ If you are searching for **free local text-to-speech**, **no API key** TTS, **on
 ## Features (today)
 
 - **Cursor:** `afterAgentResponse` → optional TTS from inline reply text (prefers the **last** `<spoken_summary>…</spoken_summary>` at the end of the reply).
+- **Claude Code:** global **Stop** hook + `~/.claude/commands/aftertone_*.md` slash commands (underscores, e.g. `/aftertone_on`). See [docs/adapters/claude.md](docs/adapters/claude.md).
 - **Flow briefings:** agents write a short listening line (state, why it matters, optional next move) — see [spoken-summary rule](.cursor/rules/spoken-summary.mdc). Repo default: **`summary_mode = "tag_only"`** (only the tag is spoken; set **`auto`** in TOML for heuristic fallback when the model omits the tag).
 - **Livelier delivery:** end each sentence in the tag with `!!`, `??`, `?!`, or `!?` (Supertonic prosody); **`expression_mode = "off"`** by default (inline `<sigh>` tags are optional via `/aftertone-expression`).
-- **Slash commands** in Agent chat (`/aftertone-lang`, `/aftertone-voice`, `/aftertone-restart`, …) — each runs **one** `python -m aftertone …` call (writes TOML; restarts the daemon when needed). No hand-editing TOML for everyday changes.
+- **Slash commands** in Cursor (`/aftertone-lang`, …) and Claude Code (`/aftertone_lang`, …) — each runs **one** `python -m aftertone …` call (writes TOML; restarts the daemon when needed). No hand-editing TOML for everyday changes.
 - **v2 CLI:** `cd py && uv run python -m aftertone {on|off|toggle|status|restart|repair|doctor|set …}` — same contract as slash commands; install root from `aftertone-install-dir` or `AFTERTONE_INSTALL_DIR`.
 - `speak_summary_prepare.py` → JSON for `POST /say`; `tts_daemon.py` → localhost server.
 - Optional `stop` hook trace for debugging.
@@ -115,7 +116,10 @@ irm https://raw.githubusercontent.com/omarelkhal/aftertone/main/scripts/install.
 
 That clones/updates **`%USERPROFILE%\aftertone`**, installs **uv** + Python **3.13**, downloads ONNX assets, registers **`%USERPROFILE%\.cursor\hooks.json`**, starts **`tts_daemon`**, and turns spoken TTS **on** in config. Re-runs reset a dirty clone to `origin/main` automatically.
 
-After install, in Cursor only: enable **Hooks** in Settings and **trust** your workspace(s).
+After install:
+
+- **Cursor:** enable **Hooks** in Settings and **trust** your workspace(s).
+- **Claude Code:** run `claude`, then `/aftertone_on` in chat (hooks are already in `~/.claude/settings.json`; the command enables TTS and starts the daemon if needed). Full guide: [docs/adapters/claude.md](docs/adapters/claude.md).
 
 Optional flags (download script first, then invoke): `-NoStartDaemon`, `-NoGlobal`, `-SkipAssets`, `-NoEnableTts`.
 
@@ -197,7 +201,10 @@ Hooks and Python resolve the install root via **`AFTERTONE_REPO`** (preferred) o
 | `~/aftertone/` | `%USERPROFILE%\aftertone\` | One clone: `py/`, `assets/`, config TOML, daemon |
 | `~/.cursor/hooks.json` | `%USERPROFILE%\.cursor\hooks.json` | User hooks → speak_summary wrapper |
 | `~/.cursor/hooks/aftertone-install-dir` | `%USERPROFILE%\.cursor\hooks\aftertone-install-dir` | Points at install dir |
-| `~/.cursor/commands/aftertone-*.md` | `%USERPROFILE%\.cursor\commands\aftertone-*.md` | Slash commands (any workspace) |
+| `~/.cursor/commands/aftertone-*.md` | `%USERPROFILE%\.cursor\commands\aftertone-*.md` | Cursor slash commands (hyphens) |
+| `~/.claude/commands/aftertone_*.md` | — | Claude Code slash commands (underscores) |
+| `~/.claude/settings.json` | — | Claude **Stop** hooks (from install) |
+| `~/.claude/rules/spoken-summary.md` | — | Claude session rule for `<spoken_summary>` |
 
 On **Linux / macOS**, the hook command is `bash ./hooks/aftertone-speak_summary.sh`. On **Windows**, it is `.\hooks\aftertone-speak_summary.cmd` (delegates to Git Bash + `speak_summary.sh`).
 
@@ -205,9 +212,11 @@ On **Linux / macOS**, the hook command is `bash ./hooks/aftertone-speak_summary.
 
 `install.sh --no-global --into .` duplicates hooks + `py/` in that repo. Prefer the global install above.
 
-## Control (Cursor slash commands)
+## Control (slash commands)
 
-In **Agent** chat, type **`/`** and pick an **`aftertone-`** command (available in any workspace after global install). That is the **supported** way to change spoken-TTS settings — do **not** hand-edit [`.cursor/hooks/speak_summary.toml`](.cursor/hooks/speak_summary.toml) for everyday changes.
+In **Agent** chat, type **`/`** and pick an **`aftertone-`** command (Cursor: hyphens; Claude Code: underscores — see [Claude adapter](docs/adapters/claude.md)). Available in any workspace after global install. That is the **supported** way to change spoken-TTS settings — do **not** hand-edit [`.cursor/hooks/speak_summary.toml`](.cursor/hooks/speak_summary.toml) for everyday changes.
+
+### Cursor (`/aftertone-on`, …)
 
 | Command | What it does | Daemon restart? |
 |---------|----------------|-----------------|
@@ -224,6 +233,10 @@ In **Agent** chat, type **`/`** and pick an **`aftertone-`** command (available 
 | `/aftertone-repair` | Re-register global hooks, apply install defaults, restart daemon | **Yes** |
 
 Command definitions: [`.cursor/commands/`](.cursor/commands/). Each command tells the agent to run **one** CLI invocation from the install root (no bash chains, no hand-edited TOML).
+
+### Claude Code (`/aftertone_on`, …)
+
+Same surface with **underscores** — e.g. `/aftertone_on`, `/aftertone_lang`, `/aftertone_status`. Copied to `~/.claude/commands/` on install; **Stop** hooks live in `~/.claude/settings.json`. Run **`/aftertone_on`** per session to enable speech (daemon start + `enabled = true`). Guide: [docs/adapters/claude.md](docs/adapters/claude.md). Command sources: [`claude-plugin/aftertone/commands/`](claude-plugin/aftertone/commands/).
 
 **CLI (install root or `aftertone-install-dir`):**
 

@@ -2,6 +2,10 @@
 
 Static site for [aftertone on GitHub Pages](https://omarelkhal.github.io/aftertone/).
 
+- `index.html` — landing
+- `docs.html` — install, slash commands (Cursor + Claude), CLI, troubleshooting
+- `adapters/claude.md` — Claude Code adapter (linked from docs; source on GitHub)
+
 | File | URL |
 |------|-----|
 | `index.html` | Home — overview, flow, one-line install |

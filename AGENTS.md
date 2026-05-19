@@ -52,7 +52,8 @@
 - Voice pickers and status should show **human names with gender**, e.g. `Sara (female)` / `James (male)` (`py/voice_presets.py`); TOML still uses `M1`/`F4` ids.
 - Public README and site adapter tables should list only **Cursor, Claude Code, Codex, and OpenCode** (not other agent brands).
 - **Do not propose or integrate Microsoft VibeVoice**; user evaluated it locally and declined (heavy runtime vs staying on Supertonic ONNX).
-- **Claude Code without an Anthropic subscription:** user is exploring **free-claude-code** (NVIDIA NIM proxy for the model) stacked with Aftertone on a **Stop** hook; the Claude adapter is **not shipped** in this repo yet (see [CONTRIBUTING.md](CONTRIBUTING.md)).
+- **Claude Code:** global **Stop** hooks from `install.sh`; daily flow is plain **`claude`** (not **`--plugin-dir`**), then **`/aftertone_on`** / **`/aftertone_off`**. Custom slash commands are **skills**, not built-ins like **`/model`** — expect a small skill turn, not zero tokens; for instant on/off without chat: `bash ~/.cursor/hooks/aftertone-activate.sh` or `uv run --directory ~/aftertone/py python -m aftertone on|off`. Install must copy **`~/.claude/rules/spoken-summary.md`** (skills alone do not reliably produce `<spoken_summary>` tags). Optional plugin: [`claude-plugin/aftertone/`](claude-plugin/aftertone/). See [docs/adapters/claude.md](docs/adapters/claude.md).
+- **Config surface:** user changes spoken TTS only via **`/aftertone-*`** slash commands (or `aftertone` CLI) — not VS Code tasks or agent hand-edits to TOML.
 
 ## Learned Workspace Facts
 
@@ -64,3 +65,6 @@
 - **`<spoken_summary>` extraction:** `speak_summary_prepare.py` anchors on the **last** `</spoken_summary>` and the nearest `<spoken_summary>` before it — wrong audio usually means an unclosed tag mention earlier in the reply.
 - **Support:** https://buymeacoffee.com/elkhalomar — `.github/FUNDING.yml` (GitHub **Sponsor** button); README and Pages use the branded BMC button image.
 - **Supertonic ONNX weights:** pulled from [Supertone/supertonic-3](https://huggingface.co/Supertone/supertonic-3) under **OpenRAIL-M** (free local download/inference; not MIT for the model files). Aftertone project code remains MIT.
+- **Claude global install:** `install.sh` runs `py/install_global_claude_hooks.py` — Stop hooks, `spoken-summary.md` rule, all `claude-plugin/aftertone/commands/aftertone_*.md` → `~/.claude/commands/`, wrapper scripts under `~/.cursor/hooks/`, and `permissions.allow` for instant slash commands.
+- **Linux uninstall:** `bash scripts/uninstall.sh` (or the remote uninstall one-liner in README) stops the daemon, removes global Cursor/Claude Aftertone hooks and commands; deletes `~/aftertone` unless `--keep-dir` (ONNX under `assets/` goes with the install dir).
+- **Hook wiring:** global `speak_summary.sh` calls prepare via **`hook_run --stdin`**; Claude **Stop** text comes from `last_assistant_message` / transcript fallback in `py/aftertone/extract.py` and `prepare.py` (not Cursor-style inline `text` only).

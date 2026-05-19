@@ -46,6 +46,10 @@ def assistant_text_blocks(lines: list[str]) -> str:
 
 
 def hook_inline_text(hook: dict) -> str:
+    # Claude Code Stop / SubagentStop (https://code.claude.com/docs/en/hooks#stop)
+    lam = hook.get("last_assistant_message")
+    if isinstance(lam, str) and lam.strip():
+        return lam.strip()
     for key in ("text", "response", "message", "content"):
         v = hook.get(key)
         if isinstance(v, str) and v.strip():
@@ -62,7 +66,7 @@ def transcript_assistant_text(hook: dict) -> str:
 
 
 def resolve_raw_text(hook: dict, event: str) -> str:
-    if event == "afterAgentResponse":
+    if event in ("afterAgentResponse", "Stop", "SubagentStop"):
         inline = hook_inline_text(hook)
         if inline:
             if parse_spoken_summary(inline)[0]:
@@ -70,7 +74,8 @@ def resolve_raw_text(hook: dict, event: str) -> str:
             from_transcript = transcript_assistant_text(hook)
             if from_transcript and parse_spoken_summary(from_transcript)[0]:
                 return from_transcript
-            return inline
+            if event == "afterAgentResponse":
+                return inline
         return transcript_assistant_text(hook)
     return transcript_assistant_text(hook)
 
